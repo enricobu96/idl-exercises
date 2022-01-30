@@ -65,6 +65,8 @@ class FFNN(nn.Module):
     def __init__(self, vocab_size, n_classes, extra_arg_1=8, extra_arg_2=None): #TODO: change default arguments for hidden layers
         super(FFNN, self).__init__()
 
+        self.second_layer = False
+
         # Arguments initialization
         self.input_size = vocab_size
         self.hidden_size_1 = extra_arg_1
@@ -84,6 +86,7 @@ class FFNN(nn.Module):
         # If extra_arg_2: second hidden layer
         if self.hidden_size_2:
             # Second hidden layer
+            self.second_layer = True
             self.fc2 = nn.Linear(self.hidden_size_1, self.hidden_size_2)
             self.relu2 = nn.reLU()
 
@@ -100,7 +103,7 @@ class FFNN(nn.Module):
         output = self.relu1(output)
 
         # If second hidden layer
-        if self.fc2:
+        if self.second_layer:
             output = self.fc2(output)
             output = self.relu2(output)
 
@@ -114,7 +117,6 @@ indices, vocab_size = generate_bow_representations(data)
 
 #--- set up ---
 
-# WRITE CODE HERE
 # model extra parameters: up to two hidden layers sizes
 model = FFNN(vocab_size, N_CLASSES, HIDDEN_SIZE_1, HIDDEN_SIZE_2)
 loss_function = torch.nn.NLLLoss()
@@ -131,28 +133,33 @@ for epoch in range(N_EPOCHS):
     for i in range(int(len(data['training'])/BATCH_SIZE)):
         minibatch = data['training'][i*BATCH_SIZE:(i+1)*BATCH_SIZE]
 
-        # WRITE CODE HERE            
-        pass
+        optimizer.zero_grad()
+        probs = model(minibatch[0]['BOW'])
+        target = label_to_idx(minibatch[0]['SENTIMENT'])
+        loss = loss_function(probs, target)
+        total_loss += loss.item()
+        loss.backward()
+        optimizer.step()
                               
     if ((epoch+1) % REPORT_EVERY) == 0:
         print('epoch: %d, loss: %.4f' % (epoch+1, total_loss*BATCH_SIZE/len(data['training'])))
 
 
 
-#--- test ---
-correct = 0
-with torch.no_grad():
-    for tweet in data['test.gold']:
-        gold_class = label_to_idx(tweet['SENTIMENT'])
+# #--- test ---
+# correct = 0
+# with torch.no_grad():
+#     for tweet in data['test.gold']:
+#         gold_class = label_to_idx(tweet['SENTIMENT'])
 
-        # WRITE CODE HERE
-        # You can, but for the sake of this homework do not have to,
-        # use batching for the test data.
-        predicted = -1
+#         # WRITE CODE HERE
+#         # You can, but for the sake of this homework do not have to,
+#         # use batching for the test data.
+#         predicted = -1
 
-        if IS_VERBOSE:
-            print('TEST DATA: %s, GOLD LABEL: %s, GOLD CLASS %d, OUTPUT: %d' % 
-                 (' '.join(tweet['BODY'][:-1]), tweet['SENTIMENT'], gold_class, predicted))
+#         if IS_VERBOSE:
+#             print('TEST DATA: %s, GOLD LABEL: %s, GOLD CLASS %d, OUTPUT: %d' % 
+#                  (' '.join(tweet['BODY'][:-1]), tweet['SENTIMENT'], gold_class, predicted))
 
-    print('test accuracy: %.2f' % (100.0 * correct / len(data['test.gold'])))
+#     print('test accuracy: %.2f' % (100.0 * correct / len(data['test.gold'])))
 
