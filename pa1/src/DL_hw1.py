@@ -28,6 +28,11 @@ BATCH_SIZE = 1
 REPORT_EVERY = 1
 IS_VERBOSE = True
 
+# Hyperparameters we added
+HIDDEN_SIZE_1 = 8
+HIDDEN_SIZE_2 = None
+SGD_MOMENTUM = .9
+
 
 def make_bow(tweet, indices):
     feature_ids = list(indices[tok] for tok in tweet['BODY'] if tok in indices)
@@ -107,14 +112,13 @@ class FFNN(nn.Module):
 data = read_semeval_datasets(data_dir)
 indices, vocab_size = generate_bow_representations(data)
 
-
-
 #--- set up ---
 
 # WRITE CODE HERE
-model = FFNN(vocab_size, N_CLASSES) #add extra arguments here if you use
+# model extra parameters: up to two hidden layers sizes
+model = FFNN(vocab_size, N_CLASSES, HIDDEN_SIZE_1, HIDDEN_SIZE_2)
 loss_function = torch.nn.NLLLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
+optimizer = torch.optim.SGD(model.parameters(), lr=LEARNING_RATE, momentum=SGD_MOMENTUM)
 
 
 #--- training ---
