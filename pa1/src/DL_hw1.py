@@ -57,16 +57,51 @@ def label_to_idx(label):
 
 class FFNN(nn.Module):
     # Feel free to add whichever arguments you like here.
-    def __init__(self, vocab_size, n_classes, extra_arg_1=None, extra_arg_2=None):
+    def __init__(self, vocab_size, n_classes, extra_arg_1=8, extra_arg_2=None): #TODO: change default arguments for hidden layers
         super(FFNN, self).__init__()
-        # WRITE CODE HERE
-        pass
+
+        # Arguments initialization
+        self.input_size = vocab_size
+        self.hidden_size_1 = extra_arg_1
+        self.hidden_size_2 = extra_arg_2
+        self.output_size = n_classes
+
+        """
+        Layers initialization:
+            - fc1 = linear function 1: input_size -> hidden_size_1
+            - relu1 = first non-linearity layer
+        """
+        # Input layer and first hidden layer
+        self.fc1 = nn.Linear(self.input_size, self.hidden_size_1
+        )
+        self.relu1 = nn.ReLU()
+
+        # If extra_arg_2: second hidden layer
+        if self.hidden_size_2:
+            # Second hidden layer
+            self.fc2 = nn.Linear(self.hidden_size_1, self.hidden_size_2)
+            self.relu2 = nn.reLU()
+
+            # Output layer
+            self.out = nn.Linear(self.hidden_size_2, self.output_size)
+        # If not extra_arg_2: only one hidden layer
+        else:
+            self.out = nn.Linear(self.hidden_size_1, self.output_size)
+
 
     def forward(self, x):
-        # WRITE CODE HERE
-        pass
+        # Input layer and first hidden layer
+        output = self.fc1(x)
+        output = self.relu1(output)
 
+        # If second hidden layer
+        if self.fc2:
+            output = self.fc2(output)
+            output = self.relu2(output)
 
+        # If not second hidden layer
+        output = self.out(output)
+        return F.log_softmax(output, dim=1) # Not sure dim should be 1
 
 #--- data loading ---
 data = read_semeval_datasets(data_dir)
@@ -78,9 +113,8 @@ indices, vocab_size = generate_bow_representations(data)
 
 # WRITE CODE HERE
 model = FFNN(vocab_size, N_CLASSES) #add extra arguments here if you use
-loss_function = None
-optimizer = None
-
+loss_function = torch.nn.NLLLoss()
+optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
 
 
 #--- training ---
