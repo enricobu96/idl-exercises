@@ -29,7 +29,7 @@ REPORT_EVERY = 1
 IS_VERBOSE = True
 
 # Hyperparameters we added
-HIDDEN_SIZE_1 = 8
+HIDDEN_SIZE_1 = 32
 HIDDEN_SIZE_2 = None
 SGD_MOMENTUM = .9
 
@@ -62,9 +62,10 @@ def label_to_idx(label):
 
 class FFNN(nn.Module):
     # Feel free to add whichever arguments you like here.
-    def __init__(self, vocab_size, n_classes, extra_arg_1=8, extra_arg_2=None): #TODO: change default arguments for hidden layers
+    def __init__(self, vocab_size, n_classes, extra_arg_1=32, extra_arg_2=None): #TODO: change default arguments for hidden layers
         super(FFNN, self).__init__()
 
+        # Our code here
         self.second_layer = False
 
         # Arguments initialization
@@ -98,6 +99,8 @@ class FFNN(nn.Module):
 
 
     def forward(self, x):
+        # Our code here
+
         # Input layer and first hidden layer
         output = self.fc1(x)
         output = self.relu1(output)
@@ -117,7 +120,7 @@ indices, vocab_size = generate_bow_representations(data)
 
 #--- set up ---
 
-# model extra parameters: up to two hidden layers sizes
+# Our code here
 model = FFNN(vocab_size, N_CLASSES, HIDDEN_SIZE_1, HIDDEN_SIZE_2)
 loss_function = torch.nn.NLLLoss()
 optimizer = torch.optim.SGD(model.parameters(), lr=LEARNING_RATE, momentum=SGD_MOMENTUM)
@@ -133,6 +136,7 @@ for epoch in range(N_EPOCHS):
     for i in range(int(len(data['training'])/BATCH_SIZE)):
         minibatch = data['training'][i*BATCH_SIZE:(i+1)*BATCH_SIZE]
 
+        # Our code here
         optimizer.zero_grad()
         probs = model(minibatch[0]['BOW'])
         target = label_to_idx(minibatch[0]['SENTIMENT'])
@@ -143,8 +147,6 @@ for epoch in range(N_EPOCHS):
                               
     if ((epoch+1) % REPORT_EVERY) == 0:
         print('epoch: %d, loss: %.4f' % (epoch+1, total_loss*BATCH_SIZE/len(data['training'])))
-
-
 
 # #--- test ---
 # correct = 0
