@@ -18,6 +18,9 @@ import random
 from data_semeval import *
 from paths import data_dir
 
+# TODO: remove
+torch.set_num_threads(24)
+
 
 #--- hyperparameters ---
 
@@ -29,7 +32,7 @@ REPORT_EVERY = 1
 IS_VERBOSE = False # TODO: change to True
 
 # Hyperparameters we added
-HIDDEN_SIZE_1 = 32
+HIDDEN_SIZE_1 = 64
 HIDDEN_SIZE_2 = None
 SGD_MOMENTUM = .9
 
@@ -138,8 +141,10 @@ for epoch in range(N_EPOCHS):
 
         # Our code here
         optimizer.zero_grad()
+
         probs = model(minibatch[0]['BOW'])
         target = label_to_idx(minibatch[0]['SENTIMENT'])
+
         loss = loss_function(probs, target)
         total_loss += loss.item()
         loss.backward()
