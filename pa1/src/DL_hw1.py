@@ -22,11 +22,11 @@ from paths import data_dir
 #--- hyperparameters ---
 
 N_CLASSES = len(LABEL_INDICES)
-N_EPOCHS = 10
+N_EPOCHS = 10 # TODO: change to 10
 LEARNING_RATE = 0.05
 BATCH_SIZE = 1
 REPORT_EVERY = 1
-IS_VERBOSE = True
+IS_VERBOSE = False # TODO: change to True
 
 # Hyperparameters we added
 HIDDEN_SIZE_1 = 32
@@ -144,24 +144,49 @@ for epoch in range(N_EPOCHS):
         total_loss += loss.item()
         loss.backward()
         optimizer.step()
-                              
+
     if ((epoch+1) % REPORT_EVERY) == 0:
         print('epoch: %d, loss: %.4f' % (epoch+1, total_loss*BATCH_SIZE/len(data['training'])))
 
-# #--- test ---
+#--- test ---
+correct = 0
+with torch.no_grad():
+    for tweet in data['test.gold']:
+        gold_class = label_to_idx(tweet['SENTIMENT'])
+        id = tweet['ID']
+        tested = [d for d in data['test.input'] if d['ID'] == id]
+        
+        probs = model(tested[0]['BOW'])
+        predicted = torch.argmax(probs, dim=1).cpu()
+        if predicted == gold_class:
+            correct += 1
+
+        if IS_VERBOSE:
+            print('TEST DATA: %s, GOLD LABEL: %s, GOLD CLASS %d, OUTPUT: %d' % 
+                 (' '.join(tweet['BODY'][:-1]), tweet['SENTIMENT'], gold_class, predicted))
+
+    print('test accuracy: %.2f' % (100.0 * correct / len(data['test.gold'])))
+
+
+
+
+
+# #--- validation? ---
 # correct = 0
 # with torch.no_grad():
-#     for tweet in data['test.gold']:
+#     for tweet in data['development.gold']:
 #         gold_class = label_to_idx(tweet['SENTIMENT'])
-
-#         # WRITE CODE HERE
-#         # You can, but for the sake of this homework do not have to,
-#         # use batching for the test data.
-#         predicted = -1
+#         id = tweet['ID']
+#         tested = [d for d in data['development.input'] if d['ID'] == id]
+        
+#         probs = model(tested[0]['BOW'])
+#         predicted = torch.argmax(probs, dim=1).cpu()
+#         if predicted == gold_class:
+#             correct += 1
 
 #         if IS_VERBOSE:
 #             print('TEST DATA: %s, GOLD LABEL: %s, GOLD CLASS %d, OUTPUT: %d' % 
 #                  (' '.join(tweet['BODY'][:-1]), tweet['SENTIMENT'], gold_class, predicted))
 
-#     print('test accuracy: %.2f' % (100.0 * correct / len(data['test.gold'])))
+#     print('validation accuracy: %.2f' % (100.0 * correct / len(data['development.gold'])))
 
