@@ -25,16 +25,15 @@ torch.set_num_threads(24)
 #--- hyperparameters ---
 
 N_CLASSES = len(LABEL_INDICES)
-N_EPOCHS = 10
+N_EPOCHS = 20
 LEARNING_RATE = 0.05
-BATCH_SIZE = 10
+BATCH_SIZE = 50
 REPORT_EVERY = 1
 IS_VERBOSE = False # Changed to False, used to be True
 
 # Hyperparameters we added
-HIDDEN_SIZE_1 = 8
-HIDDEN_SIZE_2 = None
-
+HIDDEN_SIZE_1 = 32
+HIDDEN_SIZE_2 = 32
 
 def make_bow(tweet, indices):
     feature_ids = list(indices[tok] for tok in tweet['BODY'] if tok in indices)
@@ -92,7 +91,7 @@ class FFNN(nn.Module):
             # Second hidden layer
             self.second_layer = True
             self.fc2 = nn.Linear(self.hidden_size_1, self.hidden_size_2)
-            self.relu2 = nn.reLU()
+            self.relu2 = nn.ReLU()
 
             # Output layer
             self.out = nn.Linear(self.hidden_size_2, self.output_size)
@@ -147,9 +146,15 @@ for epoch in range(N_EPOCHS):
         OUR CODE HERE
         """
         optimizer.zero_grad()
-        probs = model(minibatch[0]['BOW'])
-        target = label_to_idx(minibatch[0]['SENTIMENT'])
-        loss = loss_function(probs, target)
+
+        ps = []
+        ts = []
+        for j in range(BATCH_SIZE):
+            ps.append(minibatch[j]['BOW'].tolist()[0])
+            ts.append(label_to_idx(minibatch[j]['SENTIMENT']))
+
+        probs = model(torch.tensor(ps))
+        loss = loss_function(probs, torch.tensor(ts))
         total_loss += loss.item()
         loss.backward()
         optimizer.step()
@@ -180,6 +185,10 @@ correct = 0
 with torch.no_grad():
     for tweet in data['development.gold']:
         gold_class = label_to_idx(tweet['SENTIMENT'])
+
+        """
+        OUR CODE HERE
+        """
         id = tweet['ID']
         tested = [d for d in data['development.input'] if d['ID'] == id]
         
