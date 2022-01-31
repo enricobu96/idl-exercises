@@ -25,16 +25,15 @@ torch.set_num_threads(24)
 #--- hyperparameters ---
 
 N_CLASSES = len(LABEL_INDICES)
-N_EPOCHS = 10 # TODO: change to 10
+N_EPOCHS = 10
 LEARNING_RATE = 0.05
-BATCH_SIZE = 1
+BATCH_SIZE = 10
 REPORT_EVERY = 1
-IS_VERBOSE = False # TODO: change to True
+IS_VERBOSE = False # Changed to False, used to be True
 
 # Hyperparameters we added
-HIDDEN_SIZE_1 = 64
+HIDDEN_SIZE_1 = 8
 HIDDEN_SIZE_2 = None
-SGD_MOMENTUM = .9
 
 
 def make_bow(tweet, indices):
@@ -60,15 +59,16 @@ def label_to_idx(label):
     return torch.LongTensor([LABEL_INDICES[label]])
 
 
-
 #--- model ---
 
 class FFNN(nn.Module):
-    # Feel free to add whichever arguments you like here.
-    def __init__(self, vocab_size, n_classes, extra_arg_1=32, extra_arg_2=None): #TODO: change default arguments for hidden layers
+
+    def __init__(self, vocab_size, n_classes, extra_arg_1=32, extra_arg_2=None):
         super(FFNN, self).__init__()
 
-        # Our code here
+        """
+        OUR CODE HERE
+        """
         self.second_layer = False
 
         # Arguments initialization
@@ -102,8 +102,9 @@ class FFNN(nn.Module):
 
 
     def forward(self, x):
-        # Our code here
-
+        """
+        OUR CODE HERE
+        """
         # Input layer and first hidden layer
         output = self.fc1(x)
         output = self.relu1(output)
@@ -115,7 +116,7 @@ class FFNN(nn.Module):
 
         # If not second hidden layer
         output = self.out(output)
-        return F.log_softmax(output, dim=1) # Not sure dim should be 1
+        return F.log_softmax(output, dim=1)
 
 #--- data loading ---
 data = read_semeval_datasets(data_dir)
@@ -123,28 +124,31 @@ indices, vocab_size = generate_bow_representations(data)
 
 #--- set up ---
 
-# Our code here
+"""
+OUR CODE HERE
+"""
 model = FFNN(vocab_size, N_CLASSES, HIDDEN_SIZE_1, HIDDEN_SIZE_2)
+
+# Loss function is a negative log likelihood loss
 loss_function = torch.nn.NLLLoss()
-optimizer = torch.optim.SGD(model.parameters(), lr=LEARNING_RATE, momentum=SGD_MOMENTUM)
+# Optimizer is SGD
+optimizer = torch.optim.SGD(model.parameters(), lr=LEARNING_RATE)
 
 
 #--- training ---
 for epoch in range(N_EPOCHS):
     total_loss = 0
-    # Generally speaking, it's a good idea to shuffle your
-    # datasets once every epoch.
     random.shuffle(data['training'])    
 
     for i in range(int(len(data['training'])/BATCH_SIZE)):
         minibatch = data['training'][i*BATCH_SIZE:(i+1)*BATCH_SIZE]
 
-        # Our code here
+        """
+        OUR CODE HERE
+        """
         optimizer.zero_grad()
-
         probs = model(minibatch[0]['BOW'])
         target = label_to_idx(minibatch[0]['SENTIMENT'])
-
         loss = loss_function(probs, target)
         total_loss += loss.item()
         loss.backward()
@@ -170,28 +174,23 @@ with torch.no_grad():
             print('TEST DATA: %s, GOLD LABEL: %s, GOLD CLASS %d, OUTPUT: %d' % 
                  (' '.join(tweet['BODY'][:-1]), tweet['SENTIMENT'], gold_class, predicted))
 
-    print('test accuracy: %.2f' % (100.0 * correct / len(data['test.gold'])))
+    print('Test accuracy on test set: %.2f' % (100.0 * correct / len(data['test.gold'])))
 
-
-
-
-
-# #--- validation? ---
-# correct = 0
-# with torch.no_grad():
-#     for tweet in data['development.gold']:
-#         gold_class = label_to_idx(tweet['SENTIMENT'])
-#         id = tweet['ID']
-#         tested = [d for d in data['development.input'] if d['ID'] == id]
+correct = 0
+with torch.no_grad():
+    for tweet in data['development.gold']:
+        gold_class = label_to_idx(tweet['SENTIMENT'])
+        id = tweet['ID']
+        tested = [d for d in data['development.input'] if d['ID'] == id]
         
-#         probs = model(tested[0]['BOW'])
-#         predicted = torch.argmax(probs, dim=1).cpu()
-#         if predicted == gold_class:
-#             correct += 1
+        probs = model(tested[0]['BOW'])
+        predicted = torch.argmax(probs, dim=1).cpu()
+        if predicted == gold_class:
+            correct += 1
 
-#         if IS_VERBOSE:
-#             print('TEST DATA: %s, GOLD LABEL: %s, GOLD CLASS %d, OUTPUT: %d' % 
-#                  (' '.join(tweet['BODY'][:-1]), tweet['SENTIMENT'], gold_class, predicted))
+        if IS_VERBOSE:
+            print('TEST DATA: %s, GOLD LABEL: %s, GOLD CLASS %d, OUTPUT: %d' % 
+                 (' '.join(tweet['BODY'][:-1]), tweet['SENTIMENT'], gold_class, predicted))
 
-#     print('validation accuracy: %.2f' % (100.0 * correct / len(data['development.gold'])))
+    print('Test accuracy on development set: %.2f' % (100.0 * correct / len(data['development.gold'])))
 
