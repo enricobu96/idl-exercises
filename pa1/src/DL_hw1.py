@@ -21,19 +21,18 @@ from paths import data_dir
 # TODO: remove
 torch.set_num_threads(24)
 
-
 #--- hyperparameters ---
 
 N_CLASSES = len(LABEL_INDICES)
 N_EPOCHS = 20
 LEARNING_RATE = 0.05
-BATCH_SIZE = 50
+BATCH_SIZE = 10
 REPORT_EVERY = 1
 IS_VERBOSE = False # Changed to False, used to be True
 
 # Hyperparameters we added
-HIDDEN_SIZE_1 = 32
-HIDDEN_SIZE_2 = 32
+HIDDEN_SIZE_1 = 64
+HIDDEN_SIZE_2 = 64
 
 def make_bow(tweet, indices):
     feature_ids = list(indices[tok] for tok in tweet['BODY'] if tok in indices)
@@ -57,7 +56,6 @@ def generate_bow_representations(data):
 def label_to_idx(label):
     return torch.LongTensor([LABEL_INDICES[label]])
 
-
 #--- model ---
 
 class FFNN(nn.Module):
@@ -78,8 +76,11 @@ class FFNN(nn.Module):
 
         """
         Layers initialization:
-            - fc1 = linear function 1: input_size -> hidden_size_1
-            - relu1 = first non-linearity layer
+            - fc1 = first layer: input_size -> hidden_size_1
+            - relu1 = non-linearity
+            - fc2 (optional, added only if HIDDEN_SIZE_2 != None) = second layer: hidden_size_1 -> hidden_size_2
+            - relu2 = non-linearity
+            - out = output layer: hidden_size_2 -> output_size
         """
         # Input layer and first hidden layer
         self.fc1 = nn.Linear(self.input_size, self.hidden_size_1
@@ -115,6 +116,8 @@ class FFNN(nn.Module):
 
         # If not second hidden layer
         output = self.out(output)
+
+        # Activation function
         return F.log_softmax(output, dim=1)
 
 #--- data loading ---
@@ -133,7 +136,6 @@ loss_function = torch.nn.NLLLoss()
 # Optimizer is SGD
 optimizer = torch.optim.SGD(model.parameters(), lr=LEARNING_RATE)
 
-
 #--- training ---
 for epoch in range(N_EPOCHS):
     total_loss = 0
@@ -145,8 +147,10 @@ for epoch in range(N_EPOCHS):
         """
         OUR CODE HERE
         """
+        # Set gradients to zero
         optimizer.zero_grad()
 
+        # Prepare minibatch for training
         ps = []
         ts = []
         for j in range(BATCH_SIZE):
@@ -154,19 +158,29 @@ for epoch in range(N_EPOCHS):
             ts.append(label_to_idx(minibatch[j]['SENTIMENT']))
 
         probs = model(torch.tensor(ps))
+
+        # Calculate loss function, sum loss to total loss, calculate gradient
         loss = loss_function(probs, torch.tensor(ts))
         total_loss += loss.item()
         loss.backward()
+
+        # Update optimizer
         optimizer.step()
 
     if ((epoch+1) % REPORT_EVERY) == 0:
         print('epoch: %d, loss: %.4f' % (epoch+1, total_loss*BATCH_SIZE/len(data['training'])))
 
 #--- test ---
+
+# Test on test set
 correct = 0
 with torch.no_grad():
     for tweet in data['test.gold']:
         gold_class = label_to_idx(tweet['SENTIMENT'])
+
+        """
+        OUR CODE HERE
+        """
         id = tweet['ID']
         tested = [d for d in data['test.input'] if d['ID'] == id]
         
@@ -181,6 +195,7 @@ with torch.no_grad():
 
     print('Test accuracy on test set: %.2f' % (100.0 * correct / len(data['test.gold'])))
 
+# Test on development set
 correct = 0
 with torch.no_grad():
     for tweet in data['development.gold']:
@@ -202,4 +217,3 @@ with torch.no_grad():
                  (' '.join(tweet['BODY'][:-1]), tweet['SENTIMENT'], gold_class, predicted))
 
     print('Test accuracy on development set: %.2f' % (100.0 * correct / len(data['development.gold'])))
-
