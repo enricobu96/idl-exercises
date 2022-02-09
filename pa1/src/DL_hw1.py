@@ -217,3 +217,5 @@ with torch.no_grad():
                  (' '.join(tweet['BODY'][:-1]), tweet['SENTIMENT'], gold_class, predicted))
 
     print('Test accuracy on development set: %.2f' % (100.0 * correct / len(data['development.gold'])))
+
+    # ciao
