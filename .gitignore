@@ -169,3 +169,5 @@ cython_debug/
 
 # End of https://www.toptal.com/developers/gitignore/api/python,jupyternotebooks
 pa1/src/__pycache__/data_semeval.cpython-37.pyc
+
+pa2/data/*
