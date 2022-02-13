@@ -15,12 +15,9 @@ BATCH_SIZE_TRAIN = 100
 BATCH_SIZE_TEST = 100
 LR = 0.01
 
-
 #--- fixed constants ---
 NUM_CLASSES = 24
 DATA_DIR = '../data/sign_mnist_%s'
-
-
 
 # --- Dataset initialization ---
 
@@ -38,24 +35,37 @@ train_set = datasets.ImageFolder(DATA_DIR % 'train', transform=train_transform)
 dev_set   = datasets.ImageFolder(DATA_DIR % 'dev',   transform=test_transform)
 test_set  = datasets.ImageFolder(DATA_DIR % 'test',  transform=test_transform)
 
-
 # Create Pytorch data loaders
 train_loader = torch.utils.data.DataLoader(dataset=train_set, batch_size=BATCH_SIZE_TRAIN, shuffle=True)
 test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=BATCH_SIZE_TEST, shuffle=False)
-
 
 #--- model ---
 class CNN(nn.Module):
     def __init__(self, num_classes=NUM_CLASSES):
         super(CNN, self).__init__()
-        # WRITE CODE HERE
-        pass
+        """
+        OUR CODE HERE
+        """
+        self.layers = nn.Sequential(
+            # 3 input channels (RGB), 6 output (not sure) 
+            nn.Conv2d(in_channels=3, out_channels=6, kernel_size=3),
+            nn.BatchNorm2d(4),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+
+            nn.Conv2d(in_channels=4, out_channels=4, kernel_size=3),
+            nn.BatchNorm2d(4),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2)
+        )
+
+        self.linear_layer = nn.Linear(196, num_classes)
 
     def forward(self, x):
-        # WRITE CODE HERE
-        pass
-
-
+        x = self.layers(x)
+        x = x.view(x.size(0), -1)
+        x = self.linear_layer(x)
+        return x
 
 #--- set up ---
 if torch.cuda.is_available():
@@ -65,10 +75,11 @@ else:
 
 model = CNN().to(device)
 
-# WRITE CODE HERE
-optimizer = None
-loss_function = None
-
+"""
+OUR CODE HERE
+"""
+optimizer = optim.Adam(model.parameters(), lr=LR)
+loss_function = nn.CrossEntropyLoss()
 
 #--- training ---
 for epoch in range(N_EPOCHS):
