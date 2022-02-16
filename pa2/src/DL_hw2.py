@@ -1,3 +1,4 @@
+from importlib.machinery import DEBUG_BYTECODE_SUFFIXES
 import torch
 import torch.optim as optim
 import torch.utils.data
@@ -19,6 +20,9 @@ LR = 0.01
 NUM_CLASSES = 24
 DATA_DIR = '../data/sign_mnist_%s'
 
+# OUR CONSTANTS
+IS_VERBOSE = True
+
 # --- Dataset initialization ---
 
 # We transform image files' contents to tensors
@@ -27,7 +31,7 @@ DATA_DIR = '../data/sign_mnist_%s'
 # Eg., horizontal-flip is definitely a bad idea for sign language data.
 # You can use another transformation here if you find a better one.
 train_transform = transforms.Compose([
-                                        #transforms.RandomHorizontalFlip(),
+                                        #transforms.RandomHorizontalFlip(), # TODO: add data augmentation
                                         transforms.ToTensor()])
 test_transform = transforms.Compose([transforms.ToTensor()])
 
@@ -38,6 +42,12 @@ test_set  = datasets.ImageFolder(DATA_DIR % 'test',  transform=test_transform)
 # Create Pytorch data loaders
 train_loader = torch.utils.data.DataLoader(dataset=train_set, batch_size=BATCH_SIZE_TRAIN, shuffle=True)
 test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=BATCH_SIZE_TEST, shuffle=False)
+
+"""
+OUR CODE HERE
+"""
+valid_loader = torch.utils.data.DataLoader(dataset=dev_set, batch_size=BATCH_SIZE_TEST, shuffle=False)
+
 
 #--- model ---
 class CNN(nn.Module):
@@ -75,13 +85,15 @@ OUR CODE HERE
 optimizer = optim.Adam(model.parameters(), lr=LR)
 loss_function = nn.CrossEntropyLoss()
 
-i = 0 # TODO: remove, just to stop early
+pre_valid_loss = float('inf')
 
 #--- training ---
 for epoch in range(N_EPOCHS):
+
     train_loss = 0
     train_correct = 0
     total = 0
+    valid_losses = []
 
     for batch_num, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
@@ -89,42 +101,60 @@ for epoch in range(N_EPOCHS):
         OUR CODE HERE
         """
         optimizer.zero_grad()
-        print(data.shape)
         outputs = model(data)
         loss = loss_function(outputs, target)
         loss.backward()
         optimizer.step()
 
-        train_loss+= loss.item()
+        train_loss+=loss.item()
+        scores, predictions = torch.max(outputs.data, 1)
+        train_correct += int(sum(predictions == target))
+        total += target.size(0)
 
-        print('Training: Epoch %d - Batch %d/%d: Loss: %.4f ' % (epoch, batch_num, len(train_loader), train_loss / (batch_num + 1)))
-
-        # print('Training: Epoch %d - Batch %d/%d: Loss: %.4f | Train Acc: %.3f%% (%d/%d)' % 
-        #       (epoch, batch_num, len(train_loader), train_loss / (batch_num + 1), 
-        #        100. * train_correct / total, train_correct, total)) # TODO: uncomment
-    if i == 3:
-        break
-
-    i+=1
+        if IS_VERBOSE:
+            print('Training: Epoch %d - Batch %d/%d: Loss: %.4f | Train Acc: %.3f%% (%d/%d)' % 
+              (epoch, batch_num, len(train_loader), train_loss / (batch_num + 1), 
+               100. * train_correct / total, train_correct, total))
     
-    # WRITE CODE HERE
-    # Please implement early stopping here.
-    # You can try different versions, simplest way is to calculate the dev error and
-    # compare this with the previous dev error, stopping if the error has grown.
+    # Really simple early stopping on validation loss
+    model.eval() 
+    for data, target in valid_loader:
+        output = model(data)
+        loss = loss_function(output, target)
+        valid_losses.append(loss.item())
+    
+    valid_loss = np.average(valid_losses)
+
+    print('Epoch', epoch, 'Validation loss', valid_loss)
+
+    # if pre_valid_loss < valid_loss:  # TODO: implement proper early stopping
+    #     break
+
+    # pre_valid_loss = valid_loss
 
 
+#--- test ---
+test_loss = 0
+test_correct = 0
+total = 0
 
-# #--- test ---
-# test_loss = 0
-# test_correct = 0
-# total = 0
+model.eval()
 
-# with torch.no_grad():
-#     for batch_num, (data, target) in enumerate(test_loader):
-#         data, target = data.to(device), target.to(device)
-#         # WRITE CODE HERE
+with torch.no_grad():
+    for batch_num, (data, target) in enumerate(test_loader):
+        data, target = data.to(device), target.to(device)
+        
+        outputs = model(data)
+        _, predicted = torch.max(outputs.data, 1)
+        total += target.size(0)
+        test_correct += (predicted == target).sum().item()
 
-#         print('Evaluating: Batch %d/%d: Loss: %.4f | Test Acc: %.3f%% (%d/%d)' % 
-#               (batch_num, len(test_loader), test_loss / (batch_num + 1), 
-#                100. * test_correct / total, test_correct, total))
+        loss = loss_function(outputs, target)
+        
+        test_loss += loss.item()
+
+
+        print('Evaluating: Batch %d/%d: Loss: %.4f | Test Acc: %.3f%% (%d/%d)' % 
+              (batch_num, len(test_loader), test_loss / (batch_num + 1), 
+               100. * test_correct / total, test_correct, total))
 
