@@ -9,7 +9,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 
-
 #--- hyperparameters ---
 N_EPOCHS = 10
 BATCH_SIZE_TRAIN = 100
@@ -22,16 +21,15 @@ DATA_DIR = '../data/sign_mnist_%s'
 
 # OUR CONSTANTS
 IS_VERBOSE = True
+PATIENCE = 3 # i.e. how many validation losses before are less than the actual one (for early stopping)
 
 # --- Dataset initialization ---
+"""
+OUR CODE HERE
+Data augmentation on training set:
 
-# We transform image files' contents to tensors
-# Plus, we can add random transformations to the training data if we like
-# Think on what kind of transformations may be meaningful for this data.
-# Eg., horizontal-flip is definitely a bad idea for sign language data.
-# You can use another transformation here if you find a better one.
+"""
 train_transform = transforms.Compose([
-                                        #transforms.RandomHorizontalFlip(), # TODO: add data augmentation
                                         transforms.ToTensor()])
 test_transform = transforms.Compose([transforms.ToTensor()])
 
@@ -41,13 +39,13 @@ test_set  = datasets.ImageFolder(DATA_DIR % 'test',  transform=test_transform)
 
 # Create Pytorch data loaders
 train_loader = torch.utils.data.DataLoader(dataset=train_set, batch_size=BATCH_SIZE_TRAIN, shuffle=True)
-test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=BATCH_SIZE_TEST, shuffle=False)
+test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=BATCH_SIZE_TEST, shuffle=True)
 
 """
 OUR CODE HERE
+DataLoader for the validation set
 """
 valid_loader = torch.utils.data.DataLoader(dataset=dev_set, batch_size=BATCH_SIZE_TEST, shuffle=False)
-
 
 #--- model ---
 class CNN(nn.Module):
@@ -81,13 +79,15 @@ model = CNN().to(device)
 
 """
 OUR CODE HERE
+Optimizer: Adam
+Loss function: CrossEntropyLoss
 """
 optimizer = optim.Adam(model.parameters(), lr=LR)
 loss_function = nn.CrossEntropyLoss()
 
-pre_valid_loss = float('inf')
-
 #--- training ---
+pre_valid_loss = float('inf')
+patience = 0
 for epoch in range(N_EPOCHS):
 
     train_loss = 0
@@ -116,7 +116,10 @@ for epoch in range(N_EPOCHS):
               (epoch, batch_num, len(train_loader), train_loss / (batch_num + 1), 
                100. * train_correct / total, train_correct, total))
     
-    # Really simple early stopping on validation loss
+    """
+    OUR CODE HERE
+    Early stopping. When validation loss is higher than the previous PATIENCE ones it stops
+    """
     model.eval() 
     for data, target in valid_loader:
         output = model(data)
@@ -127,10 +130,12 @@ for epoch in range(N_EPOCHS):
 
     print('Epoch', epoch, 'Validation loss', valid_loss)
 
-    # if pre_valid_loss < valid_loss:  # TODO: implement proper early stopping
-    #     break
+    if pre_valid_loss < valid_loss and patience == PATIENCE:
+        break
+    elif pre_valid_loss < valid_loss:
+        patience += 1
 
-    # pre_valid_loss = valid_loss
+    pre_valid_loss = valid_loss
 
 
 #--- test ---
@@ -139,11 +144,10 @@ test_correct = 0
 total = 0
 
 model.eval()
-
 with torch.no_grad():
     for batch_num, (data, target) in enumerate(test_loader):
         data, target = data.to(device), target.to(device)
-        
+
         outputs = model(data)
         _, predicted = torch.max(outputs.data, 1)
         total += target.size(0)
@@ -153,8 +157,6 @@ with torch.no_grad():
         
         test_loss += loss.item()
 
-
         print('Evaluating: Batch %d/%d: Loss: %.4f | Test Acc: %.3f%% (%d/%d)' % 
               (batch_num, len(test_loader), test_loss / (batch_num + 1), 
                100. * test_correct / total, test_correct, total))
-
