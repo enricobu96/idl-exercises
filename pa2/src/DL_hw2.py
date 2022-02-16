@@ -46,26 +46,20 @@ class CNN(nn.Module):
         """
         OUR CODE HERE
         """
-        self.layers = nn.Sequential(
-            # 3 input channels (RGB), 6 output (not sure) 
-            nn.Conv2d(in_channels=3, out_channels=6, kernel_size=3),
-            nn.BatchNorm2d(4),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-
-            nn.Conv2d(in_channels=4, out_channels=4, kernel_size=3),
-            nn.BatchNorm2d(4),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2)
-        )
-
-        self.linear_layer = nn.Linear(196, num_classes)
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=6, kernel_size=4)
+        self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
+        self.conv2 = nn.Conv2d(in_channels=6, out_channels=16, kernel_size=4)
+        self.linear_layer1 = nn.Linear(16*4*4, 120)
+        self.linear_layer2 = nn.Linear(120, 84)
+        self.linear_layer3 = nn.Linear(84, num_classes)
 
     def forward(self, x):
-        x = self.layers(x)
-        x = x.view(x.size(0), -1)
-        x = self.linear_layer(x)
-        return x
+        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv2(x)))
+        x = torch.flatten(x, 1)
+        x = F.relu(self.linear_layer1(x))
+        x = F.relu(self.linear_layer2(x))
+        return self.linear_layer3(x)
 
 #--- set up ---
 if torch.cuda.is_available():
@@ -81,18 +75,37 @@ OUR CODE HERE
 optimizer = optim.Adam(model.parameters(), lr=LR)
 loss_function = nn.CrossEntropyLoss()
 
+i = 0 # TODO: remove, just to stop early
+
 #--- training ---
 for epoch in range(N_EPOCHS):
     train_loss = 0
     train_correct = 0
     total = 0
+
     for batch_num, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
-        # WRITE CODE HERE
+        """
+        OUR CODE HERE
+        """
+        optimizer.zero_grad()
+        print(data.shape)
+        outputs = model(data)
+        loss = loss_function(outputs, target)
+        loss.backward()
+        optimizer.step()
 
-        print('Training: Epoch %d - Batch %d/%d: Loss: %.4f | Train Acc: %.3f%% (%d/%d)' % 
-              (epoch, batch_num, len(train_loader), train_loss / (batch_num + 1), 
-               100. * train_correct / total, train_correct, total))
+        train_loss+= loss.item()
+
+        print('Training: Epoch %d - Batch %d/%d: Loss: %.4f ' % (epoch, batch_num, len(train_loader), train_loss / (batch_num + 1)))
+
+        # print('Training: Epoch %d - Batch %d/%d: Loss: %.4f | Train Acc: %.3f%% (%d/%d)' % 
+        #       (epoch, batch_num, len(train_loader), train_loss / (batch_num + 1), 
+        #        100. * train_correct / total, train_correct, total)) # TODO: uncomment
+    if i == 3:
+        break
+
+    i+=1
     
     # WRITE CODE HERE
     # Please implement early stopping here.
@@ -101,17 +114,17 @@ for epoch in range(N_EPOCHS):
 
 
 
-#--- test ---
-test_loss = 0
-test_correct = 0
-total = 0
+# #--- test ---
+# test_loss = 0
+# test_correct = 0
+# total = 0
 
-with torch.no_grad():
-    for batch_num, (data, target) in enumerate(test_loader):
-        data, target = data.to(device), target.to(device)
-        # WRITE CODE HERE
+# with torch.no_grad():
+#     for batch_num, (data, target) in enumerate(test_loader):
+#         data, target = data.to(device), target.to(device)
+#         # WRITE CODE HERE
 
-        print('Evaluating: Batch %d/%d: Loss: %.4f | Test Acc: %.3f%% (%d/%d)' % 
-              (batch_num, len(test_loader), test_loss / (batch_num + 1), 
-               100. * test_correct / total, test_correct, total))
+#         print('Evaluating: Batch %d/%d: Loss: %.4f | Test Acc: %.3f%% (%d/%d)' % 
+#               (batch_num, len(test_loader), test_loss / (batch_num + 1), 
+#                100. * test_correct / total, test_correct, total))
 
