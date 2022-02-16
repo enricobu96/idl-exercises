@@ -11,7 +11,7 @@ import numpy as np
 
 #--- hyperparameters ---
 N_EPOCHS = 40
-BATCH_SIZE_TRAIN = 100
+BATCH_SIZE_TRAIN = 50
 BATCH_SIZE_TEST = 100
 LR = 0.01
 
@@ -25,14 +25,23 @@ OUR CONSTANTS
 - PATIENCE: the number of previous validation losses smaller than the actual one needed to early stop the training
 """
 IS_VERBOSE = True
-PATIENCE = 3
+PATIENCE = 6
 
 # --- Dataset initialization ---
 """
-DATA AUGMENTATION
-# TODO
+DATA AUGMENTATION. Tried techniques:
+- ColorJitter: random brightness and contrast change
+- RandomAdjustSharpness: random change sharpness (not too hardly and with low probability)
+- RandomInvert: random invert colors
+- RandomRotation: just a small rotation
+
+Finally it seems that this configuration works better, but depends also on how data is (randomly) initialized
 """
 train_transform = transforms.Compose([
+                                        transforms.ColorJitter(brightness=.5, contrast=.3),
+                                        # transforms.RandomAdjustSharpness(sharpness_factor=1.1, p=.1),
+                                        # transforms.RandomInvert(p=.1),
+                                        # transforms.RandomRotation(degrees=2),
                                         transforms.ToTensor()])
 test_transform = transforms.Compose([transforms.ToTensor()])
 
@@ -54,13 +63,13 @@ class CNN(nn.Module):
         """
         OUR CNN HERE
         - conv1, conv2: convolutional layers
-        - pool: pooling layer
+        - pool, pool2: pooling layers
         - linear_layer1,linear_layer2,linear_layer1: linear layers for the FFNN that learns
         """
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=6, kernel_size=4)
         self.pool = nn.MaxPool2d(kernel_size=3, stride=2)
-        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
         self.conv2 = nn.Conv2d(in_channels=6, out_channels=16, kernel_size=4)
+        self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
         self.linear_layer1 = nn.Linear(16*4*4, 120)
         self.linear_layer2 = nn.Linear(120, 96)
         self.linear_layer3 = nn.Linear(96, num_classes)
