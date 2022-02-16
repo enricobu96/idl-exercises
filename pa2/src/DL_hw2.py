@@ -94,7 +94,6 @@ model = CNN().to(device)
 OPTIMIZER AND LOSS FUNCTION
 Optimizer: Adam
 Loss function: CrossEntropyLoss
-# TODO: try different + try regularization here
 """
 optimizer = optim.Adam(model.parameters(), lr=LR)
 loss_function = nn.CrossEntropyLoss()
@@ -178,3 +177,42 @@ with torch.no_grad():
         print('Evaluating: Batch %d/%d: Loss: %.4f | Test Acc: %.3f%% (%d/%d)' % 
               (batch_num, len(test_loader), test_loss / (batch_num + 1), 
                100. * test_correct / total, test_correct, total))
+
+"""
+REGULARIZATION AND OPTIMIZATION
+
+Before doing any regularization and optimization, we started with the following parameters:
+- N_EPOCHS = 40
+- BATCH_SIZE_TRAIN = 50
+- PATIENCE = 6
+
+With these we were able to achieve the following baseline:
+- Number of epochs: 8
+- Maximum train accuracy: around 98%
+- Test accuracy: between 76% and 82%
+
+Regarding regularization, we tried the following techniques:
+-
+-
+-
+
+And we got the following results:
+
+| Technique | Training accuracy (approx.) | Test accuracy (range) |
+|-----------|-----------------------------|-----------------------|
+|           |                             |                       |
+|           |                             |                       |
+|           |                             |                       |
+
+Regarding optimization, we tried the following techniques:
+-
+-
+-
+
+And we got the following results:
+| Technique | Training accuracy (approx.) | Test accuracy (range) |
+|-----------|-----------------------------|-----------------------|
+|           |                             |                       |
+|           |                             |                       |
+|           |                             |                       |
+"""
