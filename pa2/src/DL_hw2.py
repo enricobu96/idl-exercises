@@ -10,7 +10,7 @@ import torch.nn.functional as F
 import numpy as np
 
 #--- hyperparameters ---
-N_EPOCHS = 10
+N_EPOCHS = 40
 BATCH_SIZE_TRAIN = 100
 BATCH_SIZE_TEST = 100
 LR = 0.01
@@ -19,15 +19,18 @@ LR = 0.01
 NUM_CLASSES = 24
 DATA_DIR = '../data/sign_mnist_%s'
 
-# OUR CONSTANTS
+"""
+OUR CONSTANTS
+- IS_VERBOSE: to avoid too much output
+- PATIENCE: the number of previous validation losses smaller than the actual one needed to early stop the training
+"""
 IS_VERBOSE = True
-PATIENCE = 3 # i.e. how many validation losses before are less than the actual one (for early stopping)
+PATIENCE = 3
 
 # --- Dataset initialization ---
 """
-OUR CODE HERE
-Data augmentation on training set:
-
+DATA AUGMENTATION
+# TODO
 """
 train_transform = transforms.Compose([
                                         transforms.ToTensor()])
@@ -41,10 +44,7 @@ test_set  = datasets.ImageFolder(DATA_DIR % 'test',  transform=test_transform)
 train_loader = torch.utils.data.DataLoader(dataset=train_set, batch_size=BATCH_SIZE_TRAIN, shuffle=True)
 test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=BATCH_SIZE_TEST, shuffle=True)
 
-"""
-OUR CODE HERE
-DataLoader for the validation set
-"""
+##DataLoader for the validation set
 valid_loader = torch.utils.data.DataLoader(dataset=dev_set, batch_size=BATCH_SIZE_TEST, shuffle=False)
 
 #--- model ---
@@ -52,7 +52,10 @@ class CNN(nn.Module):
     def __init__(self, num_classes=NUM_CLASSES):
         super(CNN, self).__init__()
         """
-        OUR CODE HERE
+        OUR CNN HERE
+        - conv1, conv2: convolutional layers
+        - pool: pooling layer
+        - linear_layer1,linear_layer2,linear_layer1: linear layers for the FFNN that learns
         """
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=6, kernel_size=4)
         self.pool = nn.MaxPool2d(kernel_size=2, stride=2)
@@ -78,16 +81,17 @@ else:
 model = CNN().to(device)
 
 """
-OUR CODE HERE
+OPTIMIZER AND LOSS FUNCTION
 Optimizer: Adam
 Loss function: CrossEntropyLoss
+# TODO: try different + try regularization here
 """
 optimizer = optim.Adam(model.parameters(), lr=LR)
 loss_function = nn.CrossEntropyLoss()
 
 #--- training ---
 pre_valid_loss = float('inf')
-patience = 0
+pre_valid_losses = []
 for epoch in range(N_EPOCHS):
 
     train_loss = 0
@@ -98,7 +102,7 @@ for epoch in range(N_EPOCHS):
     for batch_num, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
         """
-        OUR CODE HERE
+        TRAINING STEPS
         """
         optimizer.zero_grad()
         outputs = model(data)
@@ -117,8 +121,9 @@ for epoch in range(N_EPOCHS):
                100. * train_correct / total, train_correct, total))
     
     """
-    OUR CODE HERE
-    Early stopping. When validation loss is higher than the previous PATIENCE ones it stops
+    EARLY STOPPING
+    When validation loss is higher than the previous PATIENCE ones it stops.
+    If there have been PATIENCE or more previous losses smaller than the actual, stop
     """
     model.eval() 
     for data, target in valid_loader:
@@ -127,16 +132,19 @@ for epoch in range(N_EPOCHS):
         valid_losses.append(loss.item())
     
     valid_loss = np.average(valid_losses)
+    pre_valid_loss = valid_loss
+    pre_valid_losses.append(valid_loss)
 
     print('Epoch', epoch, 'Validation loss', valid_loss)
 
-    if pre_valid_loss < valid_loss and patience == PATIENCE:
+    j = 0
+    # Now start checking if it has to stop
+    if len(pre_valid_losses) >= PATIENCE:
+        for l in pre_valid_losses:
+            if l < valid_loss:
+                j+=1
+    if(j>=PATIENCE):
         break
-    elif pre_valid_loss < valid_loss:
-        patience += 1
-
-    pre_valid_loss = valid_loss
-
 
 #--- test ---
 test_loss = 0
