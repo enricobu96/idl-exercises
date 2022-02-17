@@ -11,7 +11,7 @@ import numpy as np
 
 #--- hyperparameters ---
 N_EPOCHS = 40
-BATCH_SIZE_TRAIN = 50
+BATCH_SIZE_TRAIN = 100
 BATCH_SIZE_TEST = 100
 LR = 0.01
 
@@ -38,7 +38,7 @@ DATA AUGMENTATION. Tried techniques:
 Finally it seems that this configuration works better, but depends also on how data is (randomly) initialized
 """
 train_transform = transforms.Compose([
-                                        transforms.ColorJitter(brightness=.5, contrast=.3),
+                                        # transforms.ColorJitter(brightness=.5, contrast=.3),
                                         # transforms.RandomAdjustSharpness(sharpness_factor=1.1, p=.1),
                                         # transforms.RandomInvert(p=.1),
                                         # transforms.RandomRotation(degrees=2),
@@ -53,8 +53,8 @@ test_set  = datasets.ImageFolder(DATA_DIR % 'test',  transform=test_transform)
 train_loader = torch.utils.data.DataLoader(dataset=train_set, batch_size=BATCH_SIZE_TRAIN, shuffle=True)
 test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=BATCH_SIZE_TEST, shuffle=True)
 
-##DataLoader for the validation set
-valid_loader = torch.utils.data.DataLoader(dataset=dev_set, batch_size=BATCH_SIZE_TEST, shuffle=False)
+# DataLoader for the validation set
+valid_loader = torch.utils.data.DataLoader(dataset=dev_set, batch_size=BATCH_SIZE_TEST, shuffle=True)
 
 #--- model ---
 class CNN(nn.Module):
@@ -74,12 +74,28 @@ class CNN(nn.Module):
         self.linear_layer2 = nn.Linear(120, 96)
         self.linear_layer3 = nn.Linear(96, num_classes)
 
+        # # Dropout
+        # self.dropout = nn.Dropout(p=.15)
+
+        # # Batch norm
+        # self.batch_norm = nn.BatchNorm2d(6)
+
     def forward(self, x):
+
+        # Without batch norm
         x = self.pool(F.relu(self.conv1(x)))
+
+        # # With batch norm
+        # x = self.pool(F.relu(self.batch_norm(self.conv1(x))))
+
         x = self.pool2(F.relu(self.conv2(x)))
         x = torch.flatten(x, 1)
         x = F.relu(self.linear_layer1(x))
         x = F.relu(self.linear_layer2(x))
+
+        # # Dropout
+        # x = self.dropout(x)
+
         return self.linear_layer3(x)
 
 #--- set up ---
@@ -95,7 +111,7 @@ OPTIMIZER AND LOSS FUNCTION
 Optimizer: Adam
 Loss function: CrossEntropyLoss
 """
-optimizer = optim.Adam(model.parameters(), lr=LR)
+optimizer = optim.Adam(model.parameters(), lr=LR) #, weight_decay=1e-4)
 loss_function = nn.CrossEntropyLoss()
 
 #--- training ---
@@ -183,26 +199,26 @@ REGULARIZATION AND OPTIMIZATION
 
 Before doing any regularization and optimization, we started with the following parameters:
 - N_EPOCHS = 40
-- BATCH_SIZE_TRAIN = 50
+- BATCH_SIZE_TRAIN = 100
 - PATIENCE = 6
 
-With these we were able to achieve the following baseline:
+With these we were able to achieve the following baseline with only simple data augmentation:
 - Number of epochs: 8
 - Maximum train accuracy: around 98%
 - Test accuracy: between 76% and 82%
 
 Regarding regularization, we tried the following techniques:
--
--
--
+- L2: weight_decay=1e-4 parameter in Adam optimizer; in fact, it appears to be actually L2 norm
+- Dropout: dropout in the CNN structure. In this case we used a dropout with probability=15%
+- Batch norm: applied in the CNN structure, on the first convolutional layer
 
 And we got the following results:
 
 | Technique | Training accuracy (approx.) | Test accuracy (range) |
 |-----------|-----------------------------|-----------------------|
-|           |                             |                       |
-|           |                             |                       |
-|           |                             |                       |
+|    L2     |       98% to 99%            |      82% to 87%       |
+|  Dropout  |       97% to 99%            |      79% to 83%       |
+|Batch norm |      around 100%            |      80% to 83%       |
 
 Regarding optimization, we tried the following techniques:
 -
