@@ -13,7 +13,7 @@ import numpy as np
 N_EPOCHS = 40
 BATCH_SIZE_TRAIN = 100
 BATCH_SIZE_TEST = 100
-LR = 0.01
+LR = 0.05
 
 #--- fixed constants ---
 NUM_CLASSES = 24
@@ -25,7 +25,7 @@ OUR CONSTANTS
 - PATIENCE: the number of previous validation losses smaller than the actual one needed to early stop the training
 """
 IS_VERBOSE = True
-PATIENCE = 6
+PATIENCE = 8
 
 # --- Dataset initialization ---
 """
@@ -35,7 +35,7 @@ DATA AUGMENTATION. Tried techniques:
 - RandomInvert: random invert colors
 - RandomRotation: just a small rotation
 
-Finally it seems that this configuration works better, but depends also on how data is (randomly) initialized
+Finally it seems that this configuration works better, but somewhat depends also on how data is (randomly) initialized
 """
 train_transform = transforms.Compose([
                                         # transforms.ColorJitter(brightness=.5, contrast=.3),
@@ -107,11 +107,13 @@ else:
 model = CNN().to(device)
 
 """
-OPTIMIZER AND LOSS FUNCTION
-Optimizer: Adam
-Loss function: CrossEntropyLoss
+OPTIMIZER(s) AND LOSS FUNCTION
 """
-optimizer = optim.Adam(model.parameters(), lr=LR) #, weight_decay=1e-4)
+# optimizer = optim.Adam(model.parameters(), lr=LR) #, weight_decay=1e-4)
+# optimizer = torch.optim.SGD(model.parameters(), lr=LR)
+optimizer = torch.optim.SGD(model.parameters(), lr=LR, momentum=.2)
+# optimizer = torch.optim.Adagrad(model.parameters(), lr=LR)
+
 loss_function = nn.CrossEntropyLoss()
 
 #--- training ---
@@ -197,38 +199,43 @@ with torch.no_grad():
 """
 REGULARIZATION AND OPTIMIZATION
 
-Before doing any regularization and optimization, we started with the following parameters:
+Before doing any regularization, we started with the following parameters:
 - N_EPOCHS = 40
 - BATCH_SIZE_TRAIN = 100
-- PATIENCE = 6
+- LR = 0.05
+- PATIENCE = 40 (to be sure it was deactivated)
+- Optimizer: plain SGD without momentum
 
-With these we were able to achieve the following baseline with only simple data augmentation:
-- Number of epochs: 8
-- Maximum train accuracy: around 98%
-- Test accuracy: between 76% and 82%
+With these we were able to achieve the following baseline:
+- Maximum train accuracy: around 100%
+- Test accuracy: between 82% and 86%
 
 Regarding regularization, we tried the following techniques:
-- L2: weight_decay=1e-4 parameter in Adam optimizer; in fact, it appears to be actually L2 norm
+- Weight decay: weight_decay=1e-4 parameter in Adam optimizer
 - Dropout: dropout in the CNN structure. In this case we used a dropout with probability=15%
 - Batch norm: applied in the CNN structure, on the first convolutional layer
+- Early stopping: we tried early stopping setting PATIENCE to 6
 
 And we got the following results:
 
-| Technique | Training accuracy (approx.) | Test accuracy (range) |
-|-----------|-----------------------------|-----------------------|
-|    L2     |       98% to 99%            |      82% to 87%       |
-|  Dropout  |       97% to 99%            |      79% to 83%       |
-|Batch norm |      around 100%            |      80% to 83%       |
+|  Technique | Training accuracy (approx.) | Test accuracy (range) |
+| -----------|-----------------------------|-----------------------|
+|Weight decay|       98% to 99%            |      82% to 87%       |
+|   Dropout  |       97% to 99%            |      79% to 83%       |
+| Batch norm |       around 100%           |      80% to 83%       |
+| Early stop |       around 90%            |      76% to 82%       |
 
-Regarding optimization, we tried the following techniques:
--
--
--
+Regarding optimization, we tried the following techniques (note: we also used early stopping here):
+- SGD: stochastic gradient descent without momentum (code commented in optimizer initialization section)
+- SGD with momentum: stochastic gradient descent with momentum=.2 (actual code)
+- Adam: adam optimizer (code commented in optimizer initialization section)
+- AdaGrad: adagrad optimizer (code commented in optimizer initialization section)
 
 And we got the following results:
 | Technique | Training accuracy (approx.) | Test accuracy (range) |
 |-----------|-----------------------------|-----------------------|
-|           |                             |                       |
-|           |                             |                       |
-|           |                             |                       |
+|   SGD     |          around 100%        |       82% to 86%      |
+| SGD m=.2  |          around 100%        |       93% to 95%      |
+|   Adam    |          around 90%         |       76% to 82%      |
+|  AdaGrad  |          99% to 100%        |       85% to 87%      |
 """
