@@ -37,6 +37,7 @@ REC_HIDDEN_SIZE = 20
 REC_BIDIRECTIONAL = False
 LR = 0.05
 CL_HIDDEN_SIZE = 64
+BATCH_SIZE = 50
 
 """
 FUNCTIONS
@@ -127,7 +128,7 @@ class RNN(nn.Module):
         # NOTE: we can add dropout for normalization
         out = self.fc1(out)
         out = F.log_softmax(out, dim=1)
-        return out
+        return out[0]
 
 if __name__ == '__main__':
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -195,7 +196,8 @@ if __name__ == '__main__':
         OUR CODE HERE
         """
         optimizer = torch.optim.SGD(model.parameters(), lr=LR)
-        criterion = nn.BCELoss()
+        # criterion = nn.BCELoss()
+        criterion = nn.CrossEntropyLoss()
 
         model = model.to(device)
         criterion = criterion.to(device)
@@ -203,6 +205,7 @@ if __name__ == '__main__':
         # --- Train Loop ---
         for epoch in range(N_EPOCHS):
             start_time = time.time()
+
             epoch_loss = 0
             epoch_acc = 0
             
@@ -212,35 +215,18 @@ if __name__ == '__main__':
                 optimizer.zero_grad()
                 text, text_lengths = batch.TweetText
                 predictions = model(text,text_lengths).squeeze(1)
-                print('predictions', predictions, '\n label', batch.Label)
-                break
-            break
-                # loss = criterion(predictions, batch.Label)
-                # # acc = get_accuracy(predictions, batch.Label)
-                # loss.backward()
-                # optimizer.step()
-                # epoch_loss = loss.item()
-                # # epoch_acc = acc.item()
+                loss = criterion(predictions, batch.Label)
+                epoch_acc = get_accuracy(predictions, batch.Label)
+                loss.backward()
+                optimizer.step()
+                epoch_loss = loss.item()
+
+            train_loss, train_acc = (epoch_loss / len(train_iter), epoch_acc / len(train_iter)) 
+            valid_loss, valid_acc = evaluate(model, dev_iter, criterion)
             
-            print(epoch_loss/len(train_iter), epoch_acc/len(train_iter))
-
-
-
-
-
-
-
-
-
-
-
-
-            # train_loss, train_acc = (epoch_loss / len(train_iter), epoch_acc / len(train_iter)) 
-            # valid_loss, valid_acc = evaluate(model, dev_iter, criterion)
+            end_time = time.time()
+            epoch_mins, epoch_secs = epoch_time(start_time, end_time)
             
-            # end_time = time.time()
-            # epoch_mins, epoch_secs = epoch_time(start_time, end_time)
-            
-            # print(f'Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s')
-            # print(f'\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%')
-            # print(f'\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%')
+            print(f'Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s')
+            print(f'\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%')
+            print(f'\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%')
