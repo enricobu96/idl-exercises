@@ -22,6 +22,10 @@ import regex as re
 from torchtext import vocab
 import time
 
+# TODO: remove
+torch.set_num_threads(22)
+
+
 # ---constants & hyperparameters---
 N_EPOCHS = 10
 EMBEDDING_DIM = 200
@@ -155,7 +159,7 @@ if __name__ == '__main__':
         train_data, dev_data, test_data = torchtext.\
             legacy.data.TabularDataset.splits(path='../data',
                                             format='csv', 
-                                            train='sent140.train.midi.csv',
+                                            train='sent140.train.csv',
                                             validation='sent140.dev.csv', 
                                             test='sent140.test.csv', 
                                             fields=csv_fields, 
@@ -260,8 +264,8 @@ dataset with the following parameters:
     - REC_HIDDEN_SIZE = 20
     - REC_BIDIRECTIONAL = True
 In fact, from this moment we decided to use the bidirectionality feature. With these
-parameters we reached a final train loss = , with train accuracy = %,
-test loss =  and test accuracy = %.
+parameters we reached a final train loss = 0.471, with train accuracy = 75.47%,
+test loss = 0.462 and test accuracy = 77.12%.
 
 We finally tried with the entire dataset, which took an important amount of time to
 be loaded and to be trained on (we used a local machine). We trained the model with
@@ -270,6 +274,6 @@ the following parameters:
     - LR = 0.05
     - REC_HIDDEN_SIZE = 20
     - REC_BIDIRECTIONAL = True
-With these we reached a final train loss = , with train accuracy = %,
-test loss =  and test accuracy = %.
+With these we reached a final train loss = 0.409, with train accuracy = 79.75%,
+test loss = 0.405 and test accuracy = 80.64%.
 """
