@@ -31,19 +31,16 @@ OUR CONSTANTS
 - REC_HIDDEN_SIZE: size for the hidden nodes for recurrent layer
 - REC_BIDIRECTIONAL: boolean variable, with True the LSTM will be bidirectional
 - LR: learning rate for the optimizer
-- CL_HIDDEN_SIZE: size for the hidden layer of the FFNN
 """
 REC_HIDDEN_SIZE = 20
 REC_BIDIRECTIONAL = False
-LR = 0.5
-CL_HIDDEN_SIZE = 64
-BATCH_SIZE = 50
+LR = 0.5 #TODO: change
 
 """
 FUNCTIONS
 """
 tok = spacy.load('en_core_web_sm',disable=['parser', 'tagger', 'ner'])
-# TODO: possibly improve tokenizer
+
 def tokenizer(s): 
     return [w.text.lower() for w in tok(tweet_clean(s))]
 
@@ -92,50 +89,52 @@ Params:
     - rec_hidden_size: hidden states size for recurrent layer, default REC_HIDDEN_SIZE
     - rec_bidiretional: boolean variable, if True then LSTM is bidirectional, default REC_BIDIRECTIONAL
 
-    Classifier layer:
-    - cl_hidden_size: size for the hidden layer of the FFNN, default CL_HIDDEN_SIZE
+    Classification layer:
+    - output_size: size of the output layer of the FFNN, default is 2 (positive/negative)
 """
 class RNN(nn.Module):
     def __init__(
-        self, vocab_size=10,
+        self, vocab_size,
         embedding_dim=EMBEDDING_DIM,
         rec_input_size=200,
         rec_hidden_size=REC_HIDDEN_SIZE,
-        rec_bidirectional=REC_BIDIRECTIONAL#,
-        # cl_hidden_size=CL_HIDDEN_SIZE
+        rec_bidirectional=REC_BIDIRECTIONAL,
+        output_size=2
         ):
         super().__init__()
         """
         OUR CODE HERE
         """
-        self.rec_hidden_size = rec_hidden_size
-        self.output_size = 2
 
-        # Embedding layer
+        # Embedding layer: vocab_size -> embedding_dim
         self.embedding = nn.Embedding(vocab_size, embedding_dim)
 
-        # Recurrent layer
+        # Recurrent layer: rec_input_size==embedding_dim -> rec_hidden_size
         self.lstm = nn.LSTM(rec_input_size, rec_hidden_size, bidirectional=rec_bidirectional)
 
-        # Classifier layer
-        self.fc1 = nn.Linear(rec_hidden_size, self.output_size)
+        # Classification layer: rec_hidden_size -> output_size. Here we assume that the "summarized sentence" is the last state of RNN
+        self.fc1 = nn.Linear(rec_hidden_size, output_size)
  
     def forward(self, x, length):
-        out = self.embedding(x) # embedding layer
-        out = nn.utils.rnn.pack_padded_sequence(out, length) # packing # TODO possibly remove this
+        # Embedding layer
+        out = self.embedding(x)
+
+        # Packing sequences and recurrent layer
+        out = nn.utils.rnn.pack_padded_sequence(out, length)
         out, (hidden, cell) = self.lstm(out)
         out, out_length = nn.utils.rnn.pad_packed_sequence(out)
-        # NOTE: we can add dropout for normalization
+        
+        # Classification layer: linear layer and log_softmax
         out = self.fc1(out)
         out = F.log_softmax(out, dim=1)
+        
+        # Return last state of the lstm
         return out[-1]
 
 if __name__ == '__main__':
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
         # --- Data Preparation ---
-
-        # define the columns that we want to process and how to process
         txt_field = torchtext.legacy.data.Field(sequential=True, 
                                          tokenize=tokenizer, 
                                          include_lengths=True, 
@@ -174,14 +173,13 @@ if __name__ == '__main__':
                                                     repeat=False)
 
         # --- Model, Loss, Optimizer Initialization ---        
-
         PAD_IDX = txt_field.vocab.stoi[txt_field.pad_token]
         UNK_IDX = txt_field.vocab.stoi[txt_field.unk_token]
 
         """
         OUR CODE HERE
         """
-        vocab_size = len(txt_field.vocab)
+        vocab_size = len(txt_field.vocab) # get vocabulary size
         model = RNN(vocab_size=vocab_size)
 
 	    # Copy the pretrained embeddings into the model
@@ -194,9 +192,10 @@ if __name__ == '__main__':
 
         """
         OUR CODE HERE
+        - optimizer: SGD with parametrized learning rate
+        - loss function: cross entropy loss
         """
         optimizer = torch.optim.SGD(model.parameters(), lr=LR)
-        # criterion = nn.BCELoss()
         criterion = nn.CrossEntropyLoss()
 
         model = model.to(device)
@@ -221,7 +220,6 @@ if __name__ == '__main__':
                 optimizer.step()
                 epoch_loss += loss.item()
 
-            print('what the fuck is going on?', epoch_loss, len(train_iter))
             train_loss, train_acc = (epoch_loss / len(train_iter), epoch_acc / len(train_iter))
             valid_loss, valid_acc = evaluate(model, dev_iter, criterion)
             
