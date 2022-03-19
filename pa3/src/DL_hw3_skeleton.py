@@ -33,8 +33,8 @@ OUR CONSTANTS
 - LR: learning rate for the optimizer
 """
 REC_HIDDEN_SIZE = 20
-REC_BIDIRECTIONAL = False
-LR = 0.5 #TODO: change
+REC_BIDIRECTIONAL = True
+LR = 0.05
 
 """
 FUNCTIONS
@@ -113,7 +113,8 @@ class RNN(nn.Module):
         self.lstm = nn.LSTM(rec_input_size, rec_hidden_size, bidirectional=rec_bidirectional)
 
         # Classification layer: rec_hidden_size -> output_size. Here we assume that the "summarized sentence" is the last state of RNN
-        self.fc1 = nn.Linear(rec_hidden_size, output_size)
+        mult = 2 if REC_BIDIRECTIONAL else 1
+        self.fc1 = nn.Linear(rec_hidden_size*mult, output_size)
  
     def forward(self, x, length):
         # Embedding layer
@@ -154,7 +155,7 @@ if __name__ == '__main__':
         train_data, dev_data, test_data = torchtext.\
             legacy.data.TabularDataset.splits(path='../data',
                                             format='csv', 
-                                            train='sent140.train.mini.csv', # TODO: change to only train (big file)
+                                            train='sent140.train.midi.csv',
                                             validation='sent140.dev.csv', 
                                             test='sent140.test.csv', 
                                             fields=csv_fields, 
@@ -229,3 +230,46 @@ if __name__ == '__main__':
             print(f'Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s')
             print(f'\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%')
             print(f'\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%')
+    
+        print('Test Accuracy')
+        test_loss, test_acc = evaluate(model, test_iter, criterion)
+        print(f'\tTest Loss: {test_loss:.3f} | Test Acc: {test_acc*100:.2f}%')
+
+"""
+SOME NOTES ON THE RESULTS
+
+We tried to run the program with different parameters and datasets, and we
+got different results but overall coherent with what we modified.
+
+First of all we tried with the _mini_ dataset with the following parameters:
+    - N_EPOCHS = 10
+    - LR = 0.05
+    - REC_HIDDEN_SIZE = 20
+    - REC_BIDIRECTIONAL = False
+With these we reached a final train loss = 0.540, with train accuracy = 72.80%,
+test loss = 0.549 and test accuracy = 72.06%.
+We then tried to change the bidirectionality, so with REC_BIDIRECTIONAL = True
+we got a final train loss = 0.531, with train accuracy = 72.37%, test loss = 0.536
+and test accuracy = 72.25%. The second one was then just slightly better than the
+first, but we noticed that with more epochs the difference was somewhat visible.
+
+After having assessed that everything was working fine, we tried with the _midi_
+dataset with the following parameters:
+    - N_EPOCHS = 10
+    - LR = 0.05
+    - REC_HIDDEN_SIZE = 20
+    - REC_BIDIRECTIONAL = True
+In fact, from this moment we decided to use the bidirectionality feature. With these
+parameters we reached a final train loss = , with train accuracy = %,
+test loss =  and test accuracy = %.
+
+We finally tried with the entire dataset, which took an important amount of time to
+be loaded and to be trained on (we used a local machine). We trained the model with
+the following parameters:
+    - N_EPOCHS = 10
+    - LR = 0.05
+    - REC_HIDDEN_SIZE = 20
+    - REC_BIDIRECTIONAL = True
+With these we reached a final train loss = , with train accuracy = %,
+test loss =  and test accuracy = %.
+"""
