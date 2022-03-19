@@ -11,6 +11,7 @@
 
 import sys
 import os
+from unicodedata import bidirectional
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -25,12 +26,23 @@ import time
 N_EPOCHS = 5
 EMBEDDING_DIM = 200
 OUTPUT_DIM = 2
+"""
+OUR CONSTANTS
+- REC_HIDDEN_SIZE: size for the hidden nodes for recurrent layer
+- REC_BIDIRECTIONAL: boolean variable, with True the LSTM will be bidirectional
+- LR: learning rate for the optimizer
+- CL_HIDDEN_SIZE: size for the hidden layer of the FFNN
+"""
+REC_HIDDEN_SIZE = 20
+REC_BIDIRECTIONAL = False
+LR = 0.05
+CL_HIDDEN_SIZE = 64
 
 """
 FUNCTIONS
 """
-# Auxilary functions for data preparation
 tok = spacy.load('en_core_web_sm',disable=['parser', 'tagger', 'ner'])
+# TODO: possibly improve tokenizer
 def tokenizer(s): 
     return [w.text.lower() for w in tok(tweet_clean(s))]
 
@@ -39,7 +51,6 @@ def tweet_clean(text):
     text = re.sub(r'https?:/\/\S+', ' ', text)
     return text.strip()
 
-# Evaluation functions
 def get_accuracy(output, gold):
     _, predicted = torch.max(output, dim=1)
     correct = torch.sum(torch.eq(predicted,gold)).item()
@@ -62,7 +73,6 @@ def evaluate(model, iterator, criterion):
         
     return epoch_loss / len(iterator), epoch_acc / len(iterator)
 
-# Utility
 def epoch_time(start_time, end_time):
     elapsed_time = end_time - start_time
     elapsed_mins = int(elapsed_time / 60)
@@ -71,28 +81,48 @@ def epoch_time(start_time, end_time):
 
 """
 Recurrent Network
+Params:
+    Embedding layer:
+    - vocab_size: vocabulary size, i.e. input size for embedding layer, default 10 (random initialize)
+    - embedding_dim: embedding dimension for the embedding layer
+
+    Recurrent layer:
+    - rec_input_size: input size for recurrent layer, default 200
+    - rec_hidden_size: hidden states size for recurrent layer, default REC_HIDDEN_SIZE
+    - rec_bidiretional: boolean variable, if True then LSTM is bidirectional, default REC_BIDIRECTIONAL
+
+    Classifier layer:
+    - cl_hidden_size: size for the hidden layer of the FFNN, default CL_HIDDEN_SIZE
 """
 class RNN(nn.Module):
-    def __init__(self, vocab_size, embedding_dim=EMBEDDING_DIM, start_embeddings=nn.Embedding(10,3)):
+    def __init__(
+        self, vocab_size=10,
+        embedding_dim=EMBEDDING_DIM,
+        rec_input_size=200,
+        rec_hidden_size=REC_HIDDEN_SIZE,
+        rec_bidirectional=REC_BIDIRECTIONAL#,
+        # cl_hidden_size=CL_HIDDEN_SIZE
+        ):
         super().__init__()
         """
         OUR CODE HERE
         """
-        self.embedding = start_embeddings
+        self.output_size = 2
+
         # Embedding layer
-            # No idea, but
-        self.embed = nn.Embedding(vocab_size, embedding_dim)
-        input_size = 0 # TODO: something something
+        self.embedding = nn.Embedding(vocab_size, embedding_dim)
 
         # Recurrent layer
-        # self.rnn = nn.RNN(input_size, rnn_hidden_dim, n_layers)
-        
+        self.lstm = nn.LSTM(rec_input_size, rec_hidden_size, bidirectional=rec_bidirectional)
+
+        # Classifier layer
+        self.fc1 = nn.Linear(rec_hidden_size, self.output_size)
  
-    def forward(self):
-        """
-        OUR CODE HERE
-        """
-        return 0
+    def forward(self, x, text_lengths):
+        out = self.embedding(x, text_lengths)
+        out, (hn, cn) = self.lstm(out)
+        out = self.fc1(out)
+        return F.log_softmax(out, dim=1)
 
 if __name__ == '__main__':
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -145,7 +175,7 @@ if __name__ == '__main__':
         """
         OUR CODE HERE
         """
-        model = RNN.to(device)
+        model = RNN()
 
 	    # Copy the pretrained embeddings into the model
         pretrained_embeddings = txt_field.vocab.vectors
@@ -155,14 +185,14 @@ if __name__ == '__main__':
         model.embedding.weight.data[UNK_IDX] = torch.zeros(EMBEDDING_DIM)
         model.embedding.weight.data[PAD_IDX] = torch.zeros(EMBEDDING_DIM)
 
-
-        # WRITE CODE HERE
-        optimizer = None
-        criterion = None
+        """
+        OUR CODE HERE
+        """
+        optimizer = torch.optim.SGD(model.parameters(), lr=LR)
+        criterion = nn.BCELoss()
 
         model = model.to(device)
         criterion = criterion.to(device)
-
 
         # --- Train Loop ---
         for epoch in range(N_EPOCHS):
