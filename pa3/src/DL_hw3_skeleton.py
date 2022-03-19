@@ -23,7 +23,7 @@ from torchtext import vocab
 import time
 
 # ---constants & hyperparameters---
-N_EPOCHS = 5
+N_EPOCHS = 10
 EMBEDDING_DIM = 200
 OUTPUT_DIM = 2
 """
@@ -35,7 +35,7 @@ OUR CONSTANTS
 """
 REC_HIDDEN_SIZE = 20
 REC_BIDIRECTIONAL = False
-LR = 0.05
+LR = 0.5
 CL_HIDDEN_SIZE = 64
 BATCH_SIZE = 50
 
@@ -128,7 +128,7 @@ class RNN(nn.Module):
         # NOTE: we can add dropout for normalization
         out = self.fc1(out)
         out = F.log_softmax(out, dim=1)
-        return out[0]
+        return out[-1]
 
 if __name__ == '__main__':
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -216,12 +216,13 @@ if __name__ == '__main__':
                 text, text_lengths = batch.TweetText
                 predictions = model(text,text_lengths).squeeze(1)
                 loss = criterion(predictions, batch.Label)
-                epoch_acc = get_accuracy(predictions, batch.Label)
+                epoch_acc += get_accuracy(predictions, batch.Label)
                 loss.backward()
                 optimizer.step()
-                epoch_loss = loss.item()
+                epoch_loss += loss.item()
 
-            train_loss, train_acc = (epoch_loss / len(train_iter), epoch_acc / len(train_iter)) 
+            print('what the fuck is going on?', epoch_loss, len(train_iter))
+            train_loss, train_acc = (epoch_loss / len(train_iter), epoch_acc / len(train_iter))
             valid_loss, valid_acc = evaluate(model, dev_iter, criterion)
             
             end_time = time.time()
