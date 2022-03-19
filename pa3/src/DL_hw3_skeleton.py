@@ -107,6 +107,7 @@ class RNN(nn.Module):
         """
         OUR CODE HERE
         """
+        self.rec_hidden_size = rec_hidden_size
         self.output_size = 2
 
         # Embedding layer
@@ -118,11 +119,15 @@ class RNN(nn.Module):
         # Classifier layer
         self.fc1 = nn.Linear(rec_hidden_size, self.output_size)
  
-    def forward(self, x, text_lengths):
-        out = self.embedding(x, text_lengths)
-        out, (hn, cn) = self.lstm(out)
+    def forward(self, x, length):
+        out = self.embedding(x) # embedding layer
+        out = nn.utils.rnn.pack_padded_sequence(out, length) # packing # TODO possibly remove this
+        out, (hidden, cell) = self.lstm(out)
+        out, out_length = nn.utils.rnn.pad_packed_sequence(out)
+        # NOTE: we can add dropout for normalization
         out = self.fc1(out)
-        return F.log_softmax(out, dim=1)
+        out = F.log_softmax(out, dim=1)
+        return out
 
 if __name__ == '__main__':
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -175,7 +180,8 @@ if __name__ == '__main__':
         """
         OUR CODE HERE
         """
-        model = RNN()
+        vocab_size = len(txt_field.vocab)
+        model = RNN(vocab_size=vocab_size)
 
 	    # Copy the pretrained embeddings into the model
         pretrained_embeddings = txt_field.vocab.vectors
@@ -203,15 +209,38 @@ if __name__ == '__main__':
             model.train()
             
             for batch in train_iter:
-                # WRITE CODE HERE
-                pass
+                optimizer.zero_grad()
+                text, text_lengths = batch.TweetText
+                predictions = model(text,text_lengths).squeeze(1)
+                print('predictions', predictions, '\n label', batch.Label)
+                break
+            break
+                # loss = criterion(predictions, batch.Label)
+                # # acc = get_accuracy(predictions, batch.Label)
+                # loss.backward()
+                # optimizer.step()
+                # epoch_loss = loss.item()
+                # # epoch_acc = acc.item()
+            
+            print(epoch_loss/len(train_iter), epoch_acc/len(train_iter))
 
-            train_loss, train_acc = (epoch_loss / len(train_iter), epoch_acc / len(train_iter)) 
-            valid_loss, valid_acc = evaluate(model, dev_iter, criterion)
+
+
+
+
+
+
+
+
+
+
+
+            # train_loss, train_acc = (epoch_loss / len(train_iter), epoch_acc / len(train_iter)) 
+            # valid_loss, valid_acc = evaluate(model, dev_iter, criterion)
             
-            end_time = time.time()
-            epoch_mins, epoch_secs = epoch_time(start_time, end_time)
+            # end_time = time.time()
+            # epoch_mins, epoch_secs = epoch_time(start_time, end_time)
             
-            print(f'Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s')
-            print(f'\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%')
-            print(f'\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%')
+            # print(f'Epoch: {epoch+1:02} | Epoch Time: {epoch_mins}m {epoch_secs}s')
+            # print(f'\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%')
+            # print(f'\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc*100:.2f}%')
