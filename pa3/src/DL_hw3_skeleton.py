@@ -85,7 +85,7 @@ def epoch_time(start_time, end_time):
 Recurrent Network
 Params:
     Embedding layer:
-    - vocab_size: vocabulary size, i.e. input size for embedding layer, default 10 (random initialize)
+    - vocab_size: vocabulary size, i.e. input size for embedding layer
     - embedding_dim: embedding dimension for the embedding layer
 
     Recurrent layer:
@@ -116,7 +116,8 @@ class RNN(nn.Module):
         # Recurrent layer: rec_input_size==embedding_dim -> rec_hidden_size
         self.lstm = nn.LSTM(rec_input_size, rec_hidden_size, bidirectional=rec_bidirectional)
 
-        # Classification layer: rec_hidden_size -> output_size. Here we assume that the "summarized sentence" is the last state of RNN
+        # Classification layer: rec_hidden_size (*2 if bidirectional) -> output_size
+        # Here we assume that the summarized sentence is the last state of RNN
         mult = 2 if REC_BIDIRECTIONAL else 1
         self.fc1 = nn.Linear(rec_hidden_size*mult, output_size)
  
@@ -216,6 +217,9 @@ if __name__ == '__main__':
             model.train()
             
             for batch in train_iter:
+                """
+                OUR CODE HERE
+                """
                 optimizer.zero_grad()
                 text, text_lengths = batch.TweetText
                 predictions = model(text,text_lengths).squeeze(1)
