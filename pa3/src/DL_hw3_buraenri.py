@@ -22,10 +22,6 @@ import regex as re
 from torchtext import vocab
 import time
 
-# TODO: remove
-torch.set_num_threads(22)
-
-
 # ---constants & hyperparameters---
 N_EPOCHS = 10
 EMBEDDING_DIM = 200
