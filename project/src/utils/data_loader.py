@@ -1,13 +1,14 @@
 from __future__ import annotations
 import os
 import pandas as pd
+import torchvision
 from torchvision.io import read_image
 import torch
 from torch.utils.data import Dataset
 import warnings
 warnings.filterwarnings('ignore')
 import re
-
+from sklearn import preprocessing
 
 class ImageDataset(Dataset):
     def __get_labels(self, image_name):
@@ -20,10 +21,13 @@ class ImageDataset(Dataset):
                     labels.append(label_name)
         return list(set(labels))
 
-    def __init__(self, label_dir, img_dir, transform=None, target_transform=None):
+    def __init__(self, label_dir, img_dir, classes, transform=None, target_transform=None):
         self.label_dir = label_dir
         self.img_dir = img_dir
-        self.n_classes = len([name for name in os.listdir(label_dir) if os.path.isfile(os.path.join(label_dir,name))])
+        self.classes = classes
+        self.le = preprocessing.LabelEncoder()
+        self.le.fit(self.classes)
+        self.n_classes = len(classes)
         image_names = []
         label_names = []
         for img_name in os.listdir(self.img_dir):
@@ -42,12 +46,11 @@ class ImageDataset(Dataset):
 
     def __getitem__(self, index):
         img_name,label = self.df.values[index]
-        print('INSIDE', img_name, label)
         img_path = os.path.join(self.img_dir, img_name)
-        image = read_image(img_path)
-        label = list(map(label))
+        image = read_image(img_path, mode=torchvision.io.ImageReadMode.RGB) #NOTE: speak about this in report
+        label = self.le.transform(label)
         target = torch.zeros(self.n_classes)
-        target[label] = 1.
+        target[label] = 1
         if self.transform is not None:
             image = self.transform(image)
         return image, target
