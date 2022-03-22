@@ -38,14 +38,16 @@ class ImageDataset(Dataset):
         self.target_transform = target_transform
 
     def __len__(self):
-        return len(self.img_labels)
+        return len(self.df.index)
 
     def __getitem__(self, index):
-       img_name,label = self.df[index]
-       img_path = os.path.join(self.data_dir, img_name+self.img_ext)
-       image = read_image(img_path)
-       target = torch.zeros(self.n_classes)
-       target[label] = 1.
-       if self.transform is not None:
-           image = self.transform(image)
-       return image, target
+        img_name,label = self.df.values[index]
+        print('INSIDE', img_name, label)
+        img_path = os.path.join(self.img_dir, img_name)
+        image = read_image(img_path)
+        label = list(map(label))
+        target = torch.zeros(self.n_classes)
+        target[label] = 1.
+        if self.transform is not None:
+            image = self.transform(image)
+        return image, target
