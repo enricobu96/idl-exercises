@@ -9,6 +9,8 @@ import torch.nn as nn
 import numpy as np
 
 torch.set_printoptions(threshold=10_000) #TODO: remove
+torch.set_num_threads(12)
+
 
 """
 HYPERPARAMETERS
@@ -16,10 +18,11 @@ HYPERPARAMETERS
 TRAIN_SIZE = 0.8
 BATCH_SIZE_TRAIN = 100
 BATCH_SIZE_TEST = 100
-LR = .05
-N_EPOCHS = 1
+LR = .1
+N_EPOCHS = 3
 PATIENCE = 2
 IS_VERBOSE = False
+ACTIVATION_TRESHOLD = 0.3 #TODO: change
 
 """
 SETUP
@@ -55,15 +58,17 @@ train_set, test_set, dev_set = torch.utils.data.random_split(data, [train_size, 
 
 # Create loaders
 train_loader = torch.utils.data.DataLoader(dataset=train_set, batch_size=BATCH_SIZE_TRAIN, shuffle=True, collate_fn=collate_fn)
-test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=BATCH_SIZE_TEST, shuffle=True)
-valid_loader = torch.utils.data.DataLoader(dataset=dev_set, batch_size=BATCH_SIZE_TEST, shuffle=True)
+test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=BATCH_SIZE_TEST, shuffle=True, collate_fn=collate_fn)
+valid_loader = torch.utils.data.DataLoader(dataset=dev_set, batch_size=BATCH_SIZE_TEST, shuffle=True, collate_fn=collate_fn)
 
 """
 MODEL INITIALIZATION
 """
 model = CNN().to(device)
 optimizer = torch.optim.SGD(model.parameters(), lr=LR, momentum=.2)
-loss_function = nn.CrossEntropyLoss()
+# loss_function = nn.CrossEntropyLoss()
+loss_function = nn.BCEWithLogitsLoss()
+# loss_function = nn.BCELoss()
 
 """
 TRAIN
@@ -86,7 +91,12 @@ for epoch in range(N_EPOCHS):
 
         train_loss+=loss.item()
         scores, predictions = torch.max(outputs.data, 1) #TODO change to multilabel
-        # print('TARGET', target, '\n PREDICTIONS', predictions)
+        predictions = torch.argwhere(outputs > ACTIVATION_TRESHOLD)
+        target = torch.argwhere(target)
+
+
+        # print('PREDICITONS', predictions, 'TARGET', target)
+        # break
 
     #     train_correct += int(sum(predictions == target))
     #     total += target.size(0)
@@ -121,3 +131,17 @@ for epoch in range(N_EPOCHS):
     #             j+=1
     # if(j>=PATIENCE):
     #     break
+
+
+
+model.eval()
+with torch.no_grad():
+    for batch_num, (data, target) in enumerate(test_loader):
+        data, target = torch.stack(data, dim=0), torch.stack(target, dim=0)
+
+        outputs = model(data.float())
+        scores, predictions = torch.max(outputs.data, 1) #TODO change to multilabel
+        predictions = torch.argwhere(outputs > ACTIVATION_TRESHOLD)
+        target = torch.argwhere(target)
+        print('PREDICTIONS', predictions, 'TARGET', target)
+        break

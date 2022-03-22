@@ -36,4 +36,4 @@ class CNN(nn.Module):
         # # Dropout
         # x = self.dropout(x)
 
-        return self.linear_layer3(x)
+        return F.softmax(self.linear_layer3(x))
