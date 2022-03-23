@@ -15,7 +15,7 @@ class CNN(nn.Module):
         self.linear_layer3 = nn.Linear(96, num_classes)
 
         # # Dropout
-        # self.dropout = nn.Dropout(p=.15)
+        self.dropout = nn.Dropout(p=.15)
 
         # # Batch norm
         # self.batch_norm = nn.BatchNorm2d(6)
@@ -34,6 +34,6 @@ class CNN(nn.Module):
         x = F.relu(self.linear_layer2(x))
 
         # # Dropout
-        # x = self.dropout(x)
+        x = self.dropout(x)
 
-        return F.softmax(self.linear_layer3(x))
+        return F.sigmoid(self.linear_layer3(x))
