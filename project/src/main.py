@@ -15,14 +15,14 @@ torch.set_num_threads(12)
 """
 HYPERPARAMETERS
 """
-TRAIN_SIZE = 0.8
+TRAIN_SIZE = 0.6
 BATCH_SIZE_TRAIN = 100
 BATCH_SIZE_TEST = 100
-LR = .05
-N_EPOCHS = 5
+LR = .005
+N_EPOCHS = 2
 PATIENCE = 2
 IS_VERBOSE = False
-ACTIVATION_TRESHOLD = 0.3 #TODO: change
+ACTIVATION_TRESHOLD = 0.3
 
 """
 SETUP
@@ -50,24 +50,27 @@ DATA LOADING
 # Load all data
 data = ImageDataset(label_dir='../data/annotations', img_dir='../data/images', classes=classes)
 
-# Train-test-dev split
+# Train-test split
 train_size = int(TRAIN_SIZE*len(data))
-test_size = int((len(data)-train_size)/2)
-valid_size = test_size
-train_set, test_set, dev_set = torch.utils.data.random_split(data, [train_size, test_size, valid_size])
+test_size = int(len(data)-train_size)
+train_set, test_set = torch.utils.data.random_split(data, [train_size, test_size])
+# # If we want also validation set
+# test_size = int(test_size/2)
+# valid_size = test_size
+# train_set, test_set, valid_set = torch.utils.data.random_split(data, [train_size, test_size, valid_size])
+
 
 # Create loaders
 train_loader = torch.utils.data.DataLoader(dataset=train_set, batch_size=BATCH_SIZE_TRAIN, shuffle=True, collate_fn=collate_fn)
 test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=BATCH_SIZE_TEST, shuffle=True, collate_fn=collate_fn)
-valid_loader = torch.utils.data.DataLoader(dataset=dev_set, batch_size=BATCH_SIZE_TEST, shuffle=True, collate_fn=collate_fn)
+# # If we want also validation set
+# valid_loader = torch.utils.data.DataLoader(dataset=dev_set, batch_size=BATCH_SIZE_TEST, shuffle=True, collate_fn=collate_fn)
 
 """
 MODEL INITIALIZATION
 """
 model = CNN().to(device)
-optimizer = torch.optim.SGD(model.parameters(), lr=LR, momentum=.2)
-# loss_function = nn.CrossEntropyLoss()
-# loss_function = nn.BCEWithLogitsLoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=.1)
 loss_function = nn.BCELoss()
 
 """
@@ -85,19 +88,51 @@ for epoch in range(N_EPOCHS):
         optimizer.zero_grad()
         data, target = torch.stack(data, dim=0), torch.stack(target, dim=0)
         outputs = model(data.float())
-        loss = loss_function(outputs, target)
+        loss = loss_function(outputs, target.float())
         loss.backward()
         optimizer.step()
         train_loss+=loss.item()
-        # scores, predictions = torch.max(outputs.data, 1)
+        # # For debugging
+        # predictions = outputs.data
+        # predictions = torch.argwhere(predictions > ACTIVATION_TRESHOLD)
+        # target = torch.argwhere(target)
+        # print('+++BATCH+++', batch_num, '\n PREDICITONS', outputs.data, '\n TARGET', target)
+
+"""
+TEST
+"""
+model.eval()
+with torch.no_grad():
+    for batch_num, (data, target) in enumerate(test_loader):
+        data, target = torch.stack(data, dim=0), torch.stack(target, dim=0)
+        outputs = model(data.float())
         predictions = outputs.data
         predictions = torch.argwhere(predictions > ACTIVATION_TRESHOLD)
         target = torch.argwhere(target)
+        print('PREDICTIONS', predictions, 'TARGET', target)
+        # print('PREDICTIONS', outputs.data, 'TARGET', target)
 
 
-        # print('PREDICITONS', predictions, 'TARGET', target)
-        # break
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# TODO: to add to training part
     #     train_correct += int(sum(predictions == target))
     #     total += target.size(0)
 
@@ -132,17 +167,3 @@ for epoch in range(N_EPOCHS):
     # if(j>=PATIENCE):
     #     break
 
-
-
-model.eval()
-with torch.no_grad():
-    for batch_num, (data, target) in enumerate(test_loader):
-        data, target = torch.stack(data, dim=0), torch.stack(target, dim=0)
-
-        outputs = model(data.float())
-        predictions = outputs.data
-        predictions = torch.argwhere(predictions > ACTIVATION_TRESHOLD)
-        target = torch.argwhere(target)
-        # print('PREDICTIONS', predictions, 'TARGET', target)
-        print('PREDICTIONS', predictions, 'TARGET', target)
-        break
