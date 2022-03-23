@@ -15,7 +15,7 @@ class CNN(nn.Module):
         self.linear_layer3 = nn.Linear(96, num_classes)
 
         # # Dropout
-        self.dropout = nn.Dropout(p=.15)
+        self.dropout = nn.Dropout(p=.5)
 
         # # Batch norm
         # self.batch_norm = nn.BatchNorm2d(6)

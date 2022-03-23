@@ -11,7 +11,6 @@ import numpy as np
 torch.set_printoptions(threshold=10_000) #TODO: remove
 torch.set_num_threads(12)
 
-
 """
 HYPERPARAMETERS
 """
@@ -19,8 +18,8 @@ TRAIN_SIZE = 0.6
 BATCH_SIZE_TRAIN = 100
 BATCH_SIZE_TEST = 100
 LR = .005
-N_EPOCHS = 2
-PATIENCE = 2
+N_EPOCHS = 10
+PATIENCE = 4
 IS_VERBOSE = False
 ACTIVATION_TRESHOLD = 0.3
 
@@ -54,6 +53,7 @@ data = ImageDataset(label_dir='../data/annotations', img_dir='../data/images', c
 train_size = int(TRAIN_SIZE*len(data))
 test_size = int(len(data)-train_size)
 train_set, test_set = torch.utils.data.random_split(data, [train_size, test_size])
+
 # # If we want also validation set
 # test_size = int(test_size/2)
 # valid_size = test_size
@@ -63,6 +63,7 @@ train_set, test_set = torch.utils.data.random_split(data, [train_size, test_size
 # Create loaders
 train_loader = torch.utils.data.DataLoader(dataset=train_set, batch_size=BATCH_SIZE_TRAIN, shuffle=True, collate_fn=collate_fn)
 test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=BATCH_SIZE_TEST, shuffle=True, collate_fn=collate_fn)
+
 # # If we want also validation set
 # valid_loader = torch.utils.data.DataLoader(dataset=dev_set, batch_size=BATCH_SIZE_TEST, shuffle=True, collate_fn=collate_fn)
 
@@ -92,11 +93,33 @@ for epoch in range(N_EPOCHS):
         loss.backward()
         optimizer.step()
         train_loss+=loss.item()
-        # # For debugging
-        # predictions = outputs.data
-        # predictions = torch.argwhere(predictions > ACTIVATION_TRESHOLD)
-        # target = torch.argwhere(target)
-        # print('+++BATCH+++', batch_num, '\n PREDICITONS', outputs.data, '\n TARGET', target)
+
+    """
+    EARLY STOPPING
+    When validation loss is higher than the previous PATIENCE ones it stops.
+    If there have been PATIENCE or more previous losses smaller than the actual, stop
+    """
+    model.eval() 
+    for data, target in test_loader:
+        data, target = torch.stack(data, dim=0), torch.stack(target, dim=0)
+        output = model(data.float())
+        loss = loss_function(output, target.float())
+        valid_losses.append(loss.item())
+
+    valid_loss = np.average(valid_losses)
+    pre_valid_loss = valid_loss
+    pre_valid_losses.append(valid_loss)
+
+    print('Epoch', epoch, 'Validation loss', valid_loss)
+
+    j = 0
+    # Now start checking if it has to stop
+    if len(pre_valid_losses) >= PATIENCE:
+        for l in pre_valid_losses:
+            if l < valid_loss:
+                j+=1
+    if(j>=PATIENCE):
+        break
 
 """
 TEST
@@ -110,6 +133,7 @@ with torch.no_grad():
         predictions = torch.argwhere(predictions > ACTIVATION_TRESHOLD)
         target = torch.argwhere(target)
         print('PREDICTIONS', predictions, 'TARGET', target)
+        break
         # print('PREDICTIONS', outputs.data, 'TARGET', target)
 
 
