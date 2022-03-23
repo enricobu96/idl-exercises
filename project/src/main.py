@@ -1,6 +1,7 @@
 from __future__ import annotations
 import os
 from torchvision.io import read_image
+from torchvision import transforms
 import torch
 import warnings
 from utils.data_loader import ImageDataset
@@ -16,13 +17,13 @@ torch.set_num_threads(12)
 HYPERPARAMETERS
 """
 TRAIN_SIZE = 0.6
-BATCH_SIZE_TRAIN = 100
-BATCH_SIZE_TEST = 100
-LR = .005
-N_EPOCHS = 1
+BATCH_SIZE_TRAIN = 10
+BATCH_SIZE_TEST = 10
+LR = .05
+N_EPOCHS = 10
 PATIENCE = 4
 IS_VERBOSE = True
-ACTIVATION_TRESHOLD = 0.3
+ACTIVATION_TRESHOLD = 0.4
 
 """
 SETUP
@@ -45,10 +46,20 @@ for filename in os.listdir('../data/annotations'):
 classes = list(set(classes))
 
 """
+DATA AUGMENTATION
+"""
+train_transform = transforms.Compose([
+                                        transforms.ColorJitter(brightness=.5, contrast=.3),
+                                        transforms.RandomAdjustSharpness(sharpness_factor=1.1, p=.1),
+                                        transforms.RandomInvert(p=.1),
+                                        transforms.RandomRotation(degrees=2)
+                                        ])
+
+"""
 DATA LOADING
 """
 # Load all data
-data = ImageDataset(label_dir='../data/annotations', img_dir='../data/images', classes=classes)
+data = ImageDataset(label_dir='../data/annotations', img_dir='../data/images', classes=classes, transform=train_transform)
 
 # Train-test split
 train_size = int(TRAIN_SIZE*len(data))
@@ -72,7 +83,7 @@ test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=BATCH_SIZ
 MODEL INITIALIZATION
 """
 model = CNN().to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=.1)
+optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=.5)
 loss_function = nn.BCELoss()
 
 """
