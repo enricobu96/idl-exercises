@@ -7,6 +7,7 @@ from utils.data_loader import ImageDataset
 from model.cnn import CNN
 import torch.nn as nn
 import numpy as np
+from utils.performance_measure import custom_accuracy
 
 torch.set_printoptions(threshold=10_000) #TODO: remove
 torch.set_num_threads(12)
@@ -18,9 +19,9 @@ TRAIN_SIZE = 0.6
 BATCH_SIZE_TRAIN = 100
 BATCH_SIZE_TEST = 100
 LR = .005
-N_EPOCHS = 10
+N_EPOCHS = 1
 PATIENCE = 4
-IS_VERBOSE = False
+IS_VERBOSE = True
 ACTIVATION_TRESHOLD = 0.3
 
 """
@@ -81,7 +82,7 @@ pre_valid_loss = float('inf')
 pre_valid_losses = []
 for epoch in range(N_EPOCHS):
     train_loss = 0
-    train_correct = 0
+    train_custom_correct = 0
     total = 0
     valid_losses = []
 
@@ -92,7 +93,18 @@ for epoch in range(N_EPOCHS):
         loss = loss_function(outputs, target.float())
         loss.backward()
         optimizer.step()
-        train_loss+=loss.item()
+
+        train_loss += loss.item()
+        predictions = outputs.data
+        predictions = torch.argwhere(predictions > ACTIVATION_TRESHOLD)
+        target = torch.argwhere(target)
+        train_custom_correct += custom_accuracy(predictions, target)
+        total += target.size(0)
+
+        if IS_VERBOSE:
+            print('Training: Epoch %d - Batch %d/%d: Loss: %.4f | Train custom accuracy: %.3f%% (%d/%d)' % 
+              (epoch, batch_num, len(train_loader), train_loss / (batch_num + 1),
+              100. * train_custom_correct / total, train_custom_correct, total))
 
     """
     EARLY STOPPING
@@ -124,70 +136,22 @@ for epoch in range(N_EPOCHS):
 """
 TEST
 """
+test_loss = 0
+test_custom_correct = 0
+total = 0
 model.eval()
 with torch.no_grad():
     for batch_num, (data, target) in enumerate(test_loader):
         data, target = torch.stack(data, dim=0), torch.stack(target, dim=0)
         outputs = model(data.float())
+        loss = loss_function(outputs, target.float())
+        test_loss += loss.item()
         predictions = outputs.data
         predictions = torch.argwhere(predictions > ACTIVATION_TRESHOLD)
         target = torch.argwhere(target)
-        print('PREDICTIONS', predictions, 'TARGET', target)
-        break
-        # print('PREDICTIONS', outputs.data, 'TARGET', target)
+        test_custom_correct += custom_accuracy(predictions, target)
+        total += target.size(0)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# TODO: to add to training part
-    #     train_correct += int(sum(predictions == target))
-    #     total += target.size(0)
-
-    #     if IS_VERBOSE:
-    #         print('Training: Epoch %d - Batch %d/%d: Loss: %.4f | Train Acc: %.3f%% (%d/%d)' % 
-    #           (epoch, batch_num, len(train_loader), train_loss / (batch_num + 1), 
-    #            100. * train_correct / total, train_correct, total))
-    
-    # """
-    # EARLY STOPPING
-    # When validation loss is higher than the previous PATIENCE ones it stops.
-    # If there have been PATIENCE or more previous losses smaller than the actual, stop
-    # """
-    # model.eval() 
-    # for data, target in valid_loader:
-    #     output = model(data)
-    #     loss = loss_function(output, target)
-    #     valid_losses.append(loss.item())
-    
-    # valid_loss = np.average(valid_losses)
-    # pre_valid_loss = valid_loss
-    # pre_valid_losses.append(valid_loss)
-
-    # print('Epoch', epoch, 'Validation loss', valid_loss)
-
-    # j = 0
-    # # Now start checking if it has to stop
-    # if len(pre_valid_losses) >= PATIENCE:
-    #     for l in pre_valid_losses:
-    #         if l < valid_loss:
-    #             j+=1
-    # if(j>=PATIENCE):
-    #     break
-
+        print('Evaluating: Batch %d/%d: Loss: %.4f | Test Acc: %.3f%% (%d/%d)' % 
+              (batch_num, len(test_loader), test_loss / (batch_num + 1), 
+               100. * test_custom_correct / total, test_custom_correct, total))
