@@ -14,7 +14,7 @@ torch.set_num_threads(12)
 """
 HYPERPARAMETERS
 """
-TRAIN_SIZE = 0.6
+TRAIN_SIZE = 0.5
 BATCH_SIZE_TRAIN = 100
 BATCH_SIZE_TEST = 100
 LR = .05
