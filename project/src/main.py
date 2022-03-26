@@ -1,14 +1,12 @@
 from __future__ import annotations
 import os
-from torchvision.io import read_image
-from torchvision import transforms
 import torch
 import warnings
 from utils.data_loader import ImageDataset
 from model.cnn import CNN
 import torch.nn as nn
 import numpy as np
-from utils.performance_measure import custom_accuracy
+from utils.performance_measure import calculate_precision, calculate_recall
 
 torch.set_printoptions(threshold=10_000) #TODO: remove
 torch.set_num_threads(12)
@@ -17,13 +15,13 @@ torch.set_num_threads(12)
 HYPERPARAMETERS
 """
 TRAIN_SIZE = 0.6
-BATCH_SIZE_TRAIN = 10
-BATCH_SIZE_TEST = 10
+BATCH_SIZE_TRAIN = 100
+BATCH_SIZE_TEST = 100
 LR = .05
 N_EPOCHS = 10
-PATIENCE = 4
+PATIENCE = 10
 IS_VERBOSE = True
-ACTIVATION_TRESHOLD = 0.4
+ACTIVATION_TRESHOLD = 0.3
 
 """
 SETUP
@@ -48,18 +46,18 @@ classes = list(set(classes))
 """
 DATA AUGMENTATION
 """
-train_transform = transforms.Compose([
-                                        transforms.ColorJitter(brightness=.5, contrast=.3),
-                                        transforms.RandomAdjustSharpness(sharpness_factor=1.1, p=.1),
-                                        transforms.RandomInvert(p=.1),
-                                        transforms.RandomRotation(degrees=2)
-                                        ])
+# train_transform = transforms.Compose([
+#                                         transforms.ColorJitter(brightness=.5, contrast=.3),
+#                                         transforms.RandomAdjustSharpness(sharpness_factor=1.1, p=.1),
+#                                         transforms.RandomInvert(p=.1),
+#                                         transforms.RandomRotation(degrees=2)
+#                                         ])
 
 """
 DATA LOADING
 """
 # Load all data
-data = ImageDataset(label_dir='../data/annotations', img_dir='../data/images', classes=classes, transform=train_transform)
+data = ImageDataset(label_dir='../data/annotations', img_dir='../data/images', classes=classes)#, transform=train_transform)
 
 # Train-test split
 train_size = int(TRAIN_SIZE*len(data))
@@ -93,29 +91,34 @@ pre_valid_loss = float('inf')
 pre_valid_losses = []
 for epoch in range(N_EPOCHS):
     train_loss = 0
-    train_custom_correct = 0
     total = 0
     valid_losses = []
+    precision = 0
+    recall = 0
 
     for batch_num, (data, target) in enumerate(train_loader):
         optimizer.zero_grad()
         data, target = torch.stack(data, dim=0), torch.stack(target, dim=0)
         outputs = model(data.float())
-        loss = loss_function(outputs, target.float())
+        loss = loss_function(outputs, target)
         loss.backward()
         optimizer.step()
 
         train_loss += loss.item()
         predictions = outputs.data
         predictions = torch.argwhere(predictions > ACTIVATION_TRESHOLD)
-        target = torch.argwhere(target)
-        train_custom_correct += custom_accuracy(predictions, target)
-        total += target.size(0)
 
+        target = torch.argwhere(target)
+        precision += calculate_precision(predictions, target)
+        recall += calculate_recall(predictions, target)
+
+        # print('\nTOTAL', total)
         if IS_VERBOSE:
-            print('Training: Epoch %d - Batch %d/%d: Loss: %.4f | Train custom accuracy: %.3f%% (%d/%d)' % 
-              (epoch, batch_num, len(train_loader), train_loss / (batch_num + 1),
-              100. * train_custom_correct / total, train_custom_correct, total))
+            print('Training: Epoch %d - Batch %d/%d: Loss: %.4f' % 
+              (epoch, batch_num, len(train_loader), train_loss / (batch_num + 1)))
+
+    print('EPOCH', epoch, 'PRECISION:', (precision / BATCH_SIZE_TRAIN))
+    print('EPOCH', epoch, 'RECALL:', (recall / BATCH_SIZE_TRAIN))
 
     """
     EARLY STOPPING
@@ -148,8 +151,8 @@ for epoch in range(N_EPOCHS):
 TEST
 """
 test_loss = 0
-test_custom_correct = 0
-total = 0
+precision = 0
+recall = 0
 model.eval()
 with torch.no_grad():
     for batch_num, (data, target) in enumerate(test_loader):
@@ -160,9 +163,12 @@ with torch.no_grad():
         predictions = outputs.data
         predictions = torch.argwhere(predictions > ACTIVATION_TRESHOLD)
         target = torch.argwhere(target)
-        test_custom_correct += custom_accuracy(predictions, target)
-        total += target.size(0)
 
-        print('Evaluating: Batch %d/%d: Loss: %.4f | Test Acc: %.3f%% (%d/%d)' % 
-              (batch_num, len(test_loader), test_loss / (batch_num + 1), 
-               100. * test_custom_correct / total, test_custom_correct, total))
+        precision += calculate_precision(predictions, target)
+        recall += calculate_recall(predictions, target)
+
+        if IS_VERBOSE:
+            print('Evaluating: Batch %d/%d: Loss: %.4f' % 
+              (batch_num, len(test_loader), test_loss / (batch_num + 1)))
+    print('TEST PRECISION:', (precision / BATCH_SIZE_TEST))
+    print('TEST RECALL:', (recall / BATCH_SIZE_TEST))

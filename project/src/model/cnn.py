@@ -22,7 +22,6 @@ class CNN(nn.Module):
 
     def forward(self, x):
 
-        # Without batch norm
         x = self.conv1(x)
         x = F.relu(x)
         x = self.pool(x)
@@ -37,13 +36,13 @@ class CNN(nn.Module):
         x = torch.flatten(x, 1)
 
         x = self.linear_layer1(x)
-        x = F.sigmoid(x)
+        x = F.relu(x)
         
         x = self.linear_layer2(x)
-        x = F.sigmoid(x)
+        x = F.relu(x)
 
         # Dropout
-        x = self.dropout(x)
+        # x = self.dropout(x)
 
         x = self.linear_layer3(x)
 

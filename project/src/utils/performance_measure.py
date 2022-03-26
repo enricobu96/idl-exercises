@@ -1,13 +1,31 @@
+from threading import local
 import numpy as np
-import torch
+from sklearn.metrics import confusion_matrix
 
 """
-custom_accuracy(predictions: tensor, target: tensor) -> local_accuracy: int
+calculate_precision(predictions: tensor, target: tensor) -> precision: int
 Input:
     - predictions: predicted labels
     - target: gold data
 Output:
-    - local_accuracy: portion of correct guessed labels
+    - precision: average precision over the classes
 """
-def custom_accuracy(predictions, target):
-    return len(np.intersect1d(predictions.numpy(), target.numpy()))
+def calculate_precision(predictions, target):
+    tp = np.intersect1d(predictions.numpy(), target.numpy())
+    fp = np.setdiff1d(target.numpy(), np.setdiff1d(tp, np.union1d(predictions.numpy(), target.numpy())))
+    prec = len(tp) / (len(tp) + len(fp)) if (len(tp)+len(fp)) > 0 else 0
+    return prec
+
+"""
+calculate_recall(predictions: tensor, target: tensor) -> recall: int
+Input:
+    - predictions: predicted labels
+    - target: gold data
+Output:
+    - recall: average recall over the classes
+"""
+def calculate_recall(predictions, target):
+    tp = np.intersect1d(predictions.numpy(), target.numpy())
+    fn = np.setdiff1d(predictions.numpy(), np.setdiff1d(tp, np.union1d(predictions.numpy(), target.numpy())))
+    rec = len(tp) / (len(tp) + len(fn)) if (len(tp)+len(fn)) > 0 else 0
+    return rec
