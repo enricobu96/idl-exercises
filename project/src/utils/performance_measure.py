@@ -14,6 +14,7 @@ def calculate_precision(predictions, target):
     tp = np.intersect1d(predictions.numpy(), target.numpy())
     fp = np.setdiff1d(target.numpy(), np.setdiff1d(tp, np.union1d(predictions.numpy(), target.numpy())))
     prec = len(tp) / (len(tp) + len(fp)) if (len(tp)+len(fp)) > 0 else 0
+    # print(len(tp), len(fp), prec)
     return prec
 
 """

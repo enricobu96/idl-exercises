@@ -5,23 +5,25 @@ import warnings
 from utils.data_loader import ImageDataset
 from model.cnn import CNN
 import torch.nn as nn
+from torchvision import transforms
 import numpy as np
 from utils.performance_measure import calculate_precision, calculate_recall
 
 torch.set_printoptions(threshold=10_000) #TODO: remove
-torch.set_num_threads(12)
+torch.set_num_threads(22)
 
 """
 HYPERPARAMETERS
 """
-TRAIN_SIZE = 0.5
-BATCH_SIZE_TRAIN = 100
-BATCH_SIZE_TEST = 100
-LR = .05
+TRAIN_SIZE = 0.8
+BATCH_SIZE_TRAIN = 10
+BATCH_SIZE_TEST = 10
+LR = .1
 N_EPOCHS = 10
-PATIENCE = 10
+PATIENCE = 2
 IS_VERBOSE = True
 ACTIVATION_TRESHOLD = 0.3
+WEIGHT_DECAY = 0.5
 
 """
 SETUP
@@ -46,12 +48,12 @@ classes = list(set(classes))
 """
 DATA AUGMENTATION
 """
-# train_transform = transforms.Compose([
-#                                         transforms.ColorJitter(brightness=.5, contrast=.3),
-#                                         transforms.RandomAdjustSharpness(sharpness_factor=1.1, p=.1),
-#                                         transforms.RandomInvert(p=.1),
-#                                         transforms.RandomRotation(degrees=2)
-#                                         ])
+train_transform = transforms.Compose([
+                                        transforms.ColorJitter(brightness=.5, contrast=.3),
+                                        transforms.RandomAdjustSharpness(sharpness_factor=1.1, p=.1),
+                                        transforms.RandomInvert(p=.1),
+                                        transforms.RandomRotation(degrees=2)
+                                        ])
 
 """
 DATA LOADING
@@ -81,7 +83,7 @@ test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=BATCH_SIZ
 MODEL INITIALIZATION
 """
 model = CNN().to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=.5)
+optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
 loss_function = nn.BCELoss()
 
 """
@@ -117,8 +119,8 @@ for epoch in range(N_EPOCHS):
             print('Training: Epoch %d - Batch %d/%d: Loss: %.4f' % 
               (epoch, batch_num, len(train_loader), train_loss / (batch_num + 1)))
 
-    print('EPOCH', epoch, 'PRECISION:', (precision / BATCH_SIZE_TRAIN))
-    print('EPOCH', epoch, 'RECALL:', (recall / BATCH_SIZE_TRAIN))
+    print('EPOCH', epoch, 'PRECISION:', (precision / (train_size/BATCH_SIZE_TRAIN)))
+    print('EPOCH', epoch, 'RECALL:', (recall / (train_size/BATCH_SIZE_TRAIN)))
 
     """
     EARLY STOPPING
@@ -170,5 +172,5 @@ with torch.no_grad():
         if IS_VERBOSE:
             print('Evaluating: Batch %d/%d: Loss: %.4f' % 
               (batch_num, len(test_loader), test_loss / (batch_num + 1)))
-    print('TEST PRECISION:', (precision / BATCH_SIZE_TEST))
-    print('TEST RECALL:', (recall / BATCH_SIZE_TEST))
+    print('TEST PRECISION:', (precision / (test_size/BATCH_SIZE_TEST)))
+    print('TEST RECALL:', (recall / (test_size/BATCH_SIZE_TEST)))
