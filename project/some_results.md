@@ -2,3 +2,68 @@
 
 ## Parameters
 
+TRAIN_SIZE = 0.8
+BATCH_SIZE_TRAIN = 10
+BATCH_SIZE_TEST = 10
+LR = .05
+N_EPOCHS = 10
+PATIENCE = 5
+IS_VERBOSE = True
+ACTIVATION_TRESHOLD = 0.3
+WEIGHT_DECAY = 0.1
+No dropout
+No data augmentation
+
+## Results
+
+TEST PRECISION: 0.22233333333333363
+TEST RECALL: 0.6663408007481574
+TEST F1-SCORE 0.3522383085032546
+
+Remarks: low loss on training, high loss on test
+
+# Two
+
+## Parameters
+
+TRAIN_SIZE = 0.8
+BATCH_SIZE_TRAIN = 10
+BATCH_SIZE_TEST = 10
+LR = .05
+N_EPOCHS = 10
+PATIENCE = 5
+IS_VERBOSE = True
+ACTIVATION_TRESHOLD = 0.3
+WEIGHT_DECAY = 0.1
+No dropout
+**With** data augmentation
+
+## Results
+
+TEST PRECISION: 0.20126371308016863
+TEST RECALL: 0.7574633678054891
+TEST F1-SCORE 0.4201669728000787
+
+Remarks: high loss on training (but more stable), high loss on test set BUT better results
+
+# Three
+
+## Parameters
+
+TRAIN_SIZE = 0.8
+BATCH_SIZE_TRAIN = 10
+BATCH_SIZE_TEST = 10
+LR = .05
+N_EPOCHS = 10
+PATIENCE = 5
+IS_VERBOSE = True
+ACTIVATION_TRESHOLD = *0.2*
+WEIGHT_DECAY = 0.1
+No dropout
+**With** data augmentation
+
+## Results
+
+TEST PRECISION: 0.20126371308016863
+TEST RECALL: 0.7574633678054891
+TEST F1-SCORE 0.4201669728000787
