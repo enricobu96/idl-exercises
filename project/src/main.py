@@ -38,7 +38,7 @@ warnings.filterwarnings('ignore')
 def collate_fn(batch):
     return tuple(zip(*batch))
 
-# Get all classes
+# Get all the classes for one-hot encoding
 classes = []
 for filename in os.listdir('../data/annotations'):
     filename, _ = os.path.splitext(filename)
@@ -48,18 +48,18 @@ classes = list(set(classes))
 """
 DATA AUGMENTATION
 """
-# train_transform = transforms.Compose([
-#                                         transforms.ColorJitter(brightness=.5, contrast=.3),
-#                                         transforms.RandomAdjustSharpness(sharpness_factor=1.1, p=.1),
-#                                         transforms.RandomInvert(p=.1),
-#                                         transforms.RandomRotation(degrees=2)
-#                                         ])
+train_transform = transforms.Compose([
+                                        transforms.ColorJitter(brightness=.5, contrast=.3),
+                                        transforms.RandomAdjustSharpness(sharpness_factor=1.1, p=.1),
+                                        transforms.RandomInvert(p=.1),
+                                        transforms.RandomRotation(degrees=2)
+                                        ])
 
 """
 DATA LOADING
 """
 # Load all data
-data = ImageDataset(label_dir='../data/annotations', img_dir='../data/images', classes=classes)#, transform=train_transform)
+data = ImageDataset(label_dir='../data/annotations', img_dir='../data/images', classes=classes, transform=train_transform)
 
 # Train-test split
 train_size = int(TRAIN_SIZE*len(data))
@@ -70,7 +70,6 @@ train_set, test_set = torch.utils.data.random_split(data, [train_size, test_size
 # test_size = int(test_size/2)
 # valid_size = test_size
 # train_set, test_set, valid_set = torch.utils.data.random_split(data, [train_size, test_size, valid_size])
-
 
 # Create loaders
 train_loader = torch.utils.data.DataLoader(dataset=train_set, batch_size=BATCH_SIZE_TRAIN, shuffle=True, collate_fn=collate_fn)
