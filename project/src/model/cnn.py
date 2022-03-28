@@ -42,7 +42,7 @@ class CNN(nn.Module):
         x = F.relu(x)
 
         # Dropout
-        # x = self.dropout(x)
+        x = self.dropout(x)
 
         x = self.linear_layer3(x)
 

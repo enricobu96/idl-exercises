@@ -1,32 +1,28 @@
 from threading import local
 import numpy as np
-from sklearn.metrics import confusion_matrix
 
 """
-calculate_precision(predictions: tensor, target: tensor) -> precision: int
+precision_recall_f1(predictions: tensor, target: tensor) -> prec: float, rec: float, f1: float
 Input:
     - predictions: predicted labels
     - target: gold data
 Output:
-    - precision: average precision over the classes
+    - prec: average precision over the classes
+    - rec: average recall over the classes
+    - f1: average f1 over the classes
 """
-def calculate_precision(predictions, target):
-    tp = np.intersect1d(predictions.numpy(), target.numpy())
-    fp = np.setdiff1d(target.numpy(), np.setdiff1d(tp, np.union1d(predictions.numpy(), target.numpy())))
+def precision_recall_f1(predictions, target):
+    predictions = predictions.numpy().tolist()
+    predictions = [tuple(x) for x in predictions]
+    target = target.numpy().tolist()
+    target = [tuple(x) for x in target]
+
+    fp = set(predictions) - set(target)
+    fn = set(target) - set(predictions)
+    tp = set(predictions) - set(fp)
+
     prec = len(tp) / (len(tp) + len(fp)) if (len(tp)+len(fp)) > 0 else 0
-    # print(len(tp), len(fp), prec)
-    return prec
-
-"""
-calculate_recall(predictions: tensor, target: tensor) -> recall: int
-Input:
-    - predictions: predicted labels
-    - target: gold data
-Output:
-    - recall: average recall over the classes
-"""
-def calculate_recall(predictions, target):
-    tp = np.intersect1d(predictions.numpy(), target.numpy())
-    fn = np.setdiff1d(predictions.numpy(), np.setdiff1d(tp, np.union1d(predictions.numpy(), target.numpy())))
     rec = len(tp) / (len(tp) + len(fn)) if (len(tp)+len(fn)) > 0 else 0
-    return rec
+    f1 = (2*prec*rec)/(prec+rec) if (prec+rec) > 0 else 0
+
+    return prec, rec, f1
