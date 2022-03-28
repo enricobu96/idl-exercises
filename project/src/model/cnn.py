@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class CNN(nn.Module):
-    def __init__(self, num_classes=14):
+    def __init__(self, dropout, num_classes=14):
         super(CNN, self).__init__()
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=6, kernel_size=4)
         self.pool = nn.MaxPool2d(kernel_size=3, stride=2)
@@ -17,8 +17,8 @@ class CNN(nn.Module):
         self.linear_layer3 = nn.Linear(96, num_classes)
 
         # Dropout
-        self.dropout = nn.Dropout(p=.5)
-
+        self.dropout = nn.Dropout(p=.3)
+        self.dropout_yes_or_no = dropout
 
     def forward(self, x):
 
@@ -42,7 +42,8 @@ class CNN(nn.Module):
         x = F.relu(x)
 
         # Dropout
-        x = self.dropout(x)
+        if self.dropout_yes_or_no:
+            x = self.dropout(x)
 
         x = self.linear_layer3(x)
 
