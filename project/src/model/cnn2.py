@@ -4,24 +4,20 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 """
-First CNN model, works as baseline. It is composed by:
- - Three convolutional layers
- - Two pooling layers
- - A dropout layer
- - A simple FFNN with one hidden layer (+1 input and 1 output layers)
+Second CNN model. It has the same structure of the first one, but the layers are smaller
 """
-class CNN(nn.Module):
+class CNN2(nn.Module):
     def __init__(self, dropout, num_classes=14):
-        super(CNN, self).__init__()
+        super(CNN2, self).__init__()
         self.conv1 = nn.Conv2d(in_channels=3, out_channels=6, kernel_size=4)
         self.pool = nn.MaxPool2d(kernel_size=3, stride=2)
-        self.conv2 = nn.Conv2d(in_channels=6, out_channels=16, kernel_size=4)
+        self.conv2 = nn.Conv2d(in_channels=6, out_channels=6, kernel_size=4)
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.conv3 = nn.Conv2d(in_channels=16, out_channels=32, kernel_size=4)
+        self.conv3 = nn.Conv2d(in_channels=6, out_channels=12, kernel_size=4)
 
-        self.linear_layer1 = nn.Linear(21632, 128)
-        self.linear_layer2 = nn.Linear(128, 96)
-        self.linear_layer3 = nn.Linear(96, num_classes)
+        self.linear_layer1 = nn.Linear(8112, 64)
+        self.linear_layer2 = nn.Linear(64, 32)
+        self.linear_layer3 = nn.Linear(32, num_classes)
 
         # Dropout
         self.dropout = nn.Dropout(p=.3)
