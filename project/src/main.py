@@ -4,16 +4,19 @@ import torch
 import warnings
 from utils.data_loader import ImageDataset
 from model.cnn import CNN
+from model.cnn2 import CNN2
+from model.cnn3 import CNN3
 import torch.nn as nn
 from torchvision import transforms
 import numpy as np
 from utils.performance_measure import precision_recall_f1
 from contextlib import redirect_stdout
+from itertools import product
 
 torch.set_printoptions(threshold=10_000) #TODO: remove
 torch.set_num_threads(22)
 
-def execute(batch_size_train=10, batch_size_test=10, lr=.05, epochs=10, patience=5, activation=0.3, weight_decay=0.1, transform=True, dropout=False):
+def execute(batch_size_train=10, batch_size_test=10, lr=.05, epochs=10, patience=5, activation=0.3, weight_decay=0.1, transform=True, dropout=False, model=CNN(False)):
     """
     HYPERPARAMETERS
     """
@@ -83,18 +86,16 @@ def execute(batch_size_train=10, batch_size_test=10, lr=.05, epochs=10, patience
     """
     MODEL INITIALIZATION
     """
-    model = CNN(dropout=dropout).to(device)
+    model = model.to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=LR, weight_decay=WEIGHT_DECAY)
     loss_function = nn.BCELoss()
 
     """
     TRAIN
     """
-    pre_valid_loss = float('inf')
     pre_valid_losses = []
     for epoch in range(N_EPOCHS):
         train_loss = 0
-        total = 0
         valid_losses = []
         precision = 0
         recall = 0
@@ -139,7 +140,6 @@ def execute(batch_size_train=10, batch_size_test=10, lr=.05, epochs=10, patience
             valid_losses.append(loss.item())
 
         valid_loss = np.average(valid_losses)
-        pre_valid_loss = valid_loss
         pre_valid_losses.append(valid_loss)
 
         # print('Epoch', epoch, 'Validation loss', valid_loss)
@@ -159,6 +159,7 @@ def execute(batch_size_train=10, batch_size_test=10, lr=.05, epochs=10, patience
     test_loss = 0
     precision = 0
     recall = 0
+    f1 = 0
     model.eval()
     with torch.no_grad():
         for batch_num, (data, target) in enumerate(test_loader):
@@ -184,58 +185,59 @@ def execute(batch_size_train=10, batch_size_test=10, lr=.05, epochs=10, patience
         print((precision / (test_size/BATCH_SIZE_TEST)), '\t', (recall / (test_size/BATCH_SIZE_TEST)), '\t', (f1 / (test_size/BATCH_SIZE_TEST)))
 
 # Execution with different parameters
-batch_sizes = [10, 100, 1000]
-lrs = [0.05, 0.1]
-epochss = [8]
-patiences = [5]
-activations = [0.2, 0.3, 0.4]
-weight_decays = [0.1, 0.5]
-transformms = [True, False]
-dropouts = [False, True]
+def several_executions():
+    batch_sizes = [1000, 100, 10]
+    lrs = [0.1, 0.5]
+    epochss = [10]
+    patiences = [5]
+    activations = [0.2, 0.3, 0.4]
+    weight_decays = [0.1, 0.5]
+    transformms = [False, True]
+    dropouts = [False, True]
 
-with open('results.txt', 'a') as f:
-    with redirect_stdout(f):
-        for batch_size in batch_sizes:
-            for lr in lrs:
-                for epochs in epochss:
-                    for patience in patiences:
-                        for activation in activations:
-                            for weight_decay in weight_decays:
-                                for transformm in transformms:
-                                    for dropout in dropouts:
-                                        print('BATCH SIZE:', batch_size)
-                                        print('LR:', lr)
-                                        print('EPOCHS:', epochs)
-                                        print('PATIENCE:', patience)
-                                        print('ACTIVATION:', activation)
-                                        print('WEIGHT DECAY:', weight_decay)
-                                        print('TRANSFORM:', transformm)
-                                        print('DROPOUT:', dropout)
-                                        print('Test precision\tTest recall\tTest f1')
-                                        execute(batch_size, batch_size, lr, epochs, patience, activation, weight_decay, transformm, dropout)
-                                        print('\n')
-                                        f.flush()
-    f.close()
+    # with open('results_cnn_1.txt', 'a') as f:
+    #     with redirect_stdout(f):
+    #         for b, l, e, p, a, w, t, d in product(batch_sizes,
+    #                     lrs, epochss, patiences, activations, 
+    #                     weight_decays, transformms, dropouts):
+    #             print('BATCH SIZE:', b, '\nLR:', l, '\nEPOCHS:', 
+    #                 e, '\nPATIENCE:', p, '\nACTIVATION:', a, 
+    #                 '\nWEIGHT DECAY:', w, '\nTRANSFORM:', t, 
+    #                 '\nDROPOUT:', d)
+    #             print('Test precision\tTest recall\tTest f1')
+    #             execute(b, b, l, e, p, a, w, t, d, CNN(dropout=d))
+    #             print('\n')
+    #             f.flush()
+    #     f.close()
 
+    with open('results_cnn_2.txt', 'a') as f:
+        with redirect_stdout(f):
+            for b, l, e, p, a, w, t, d in product(batch_sizes,
+                        lrs, epochss, patiences, activations, 
+                        weight_decays, transformms, dropouts):
+                print('BATCH SIZE:', b, '\nLR:', l, '\nEPOCHS:', 
+                    e, '\nPATIENCE:', p, '\nACTIVATION:', a, 
+                    '\nWEIGHT DECAY:', w, '\nTRANSFORM:', t, 
+                    '\nDROPOUT:', d)
+                print('Test precision\tTest recall\tTest f1')
+                execute(b, b, l, e, p, a, w, t, d, CNN2(dropout=d))
+                print('\n')
+                f.flush()
+        f.close()
 
+    with open('results_cnn_3.txt', 'a') as f:
+        with redirect_stdout(f):
+            for b, l, e, p, a, w, t, d in product(batch_sizes,
+                        lrs, epochss, patiences, activations, 
+                        weight_decays, transformms, dropouts):
+                print('BATCH SIZE:', b, '\nLR:', l, '\nEPOCHS:', 
+                    e, '\nPATIENCE:', p, '\nACTIVATION:', a, 
+                    '\nWEIGHT DECAY:', w, '\nTRANSFORM:', t, 
+                    '\nDROPOUT:', d)
+                print('Test precision\tTest recall\tTest f1')
+                execute(b, b, l, e, p, a, w, t, d, CNN3(dropout=d))
+                print('\n')
+                f.flush()
+        f.close()
 
-
-# # Changing batch sizes
-# with open('out.txt', 'a') as f:
-#     with redirect_stdout(f):
-#         print('CHANGING ONLY BATCH SIZES')
-#         for b in batch_sizes:
-#             print('\n Batch_size:', b)
-#             execute(batch_size_train=b, batch_size_test=b, lr=0.1, epochs=1, patience=1, activation=0.5, weight_decay=0.1, transform=True)
-#             f.flush()
-#     f.close()
-
-# # Changing LR
-# with open('out.txt', 'a') as f:
-#     with redirect_stdout(f):
-#         print('CHANGING ONLY LR')
-#         for b in lrs:
-#             print('\n LR:', b)
-#             execute(batch_size_train=100, batch_size_test=100, lr=b, epochs=1, patience=1, activation=0.5, weight_decay=0.01, transform=True)
-#             f.flush()
-#     f.close()
+several_executions()
