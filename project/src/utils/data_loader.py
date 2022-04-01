@@ -10,6 +10,14 @@ warnings.filterwarnings('ignore')
 import re
 from sklearn import preprocessing
 
+"""
+CUSTOM CLASS FOR THE DATASET
+    Created by inheritance from the standard PyTorch implementation. The following methods are overriden:
+    - __init__: to initialize the dataset
+    - __len__: to get the length of the dataset
+    - __getitem__: to get the data from the dataset
+    Other details on the implementation can be found in the technical report
+"""
 class ImageDataset(Dataset):
     def __get_labels(self, image_name):
         labels = []
@@ -42,7 +50,7 @@ class ImageDataset(Dataset):
         self.target_transform = target_transform
 
     def __len__(self):
-        return len(self.df.index)
+        return len(self.df.index) 
 
     def __getitem__(self, index):
         img_name,label = self.df.values[index]
