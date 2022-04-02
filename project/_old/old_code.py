@@ -1,0 +1,1 @@
+print((precision / (test_size/BATCH_SIZE_TEST)), '\t', (recall / (test_size/BATCH_SIZE_TEST)), '\t', (f1 / (test_size/BATCH_SIZE_TEST)))
