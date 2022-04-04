@@ -11,14 +11,9 @@ import re
 from sklearn import preprocessing
 
 """
-CUSTOM CLASS FOR THE DATASET
-    Created by inheritance from the standard PyTorch implementation. The following methods are overriden:
-    - __init__: to initialize the dataset
-    - __len__: to get the length of the dataset
-    - __getitem__: to get the data from the dataset
-    Other details on the implementation can be found in the technical report
+WARNING: this class is needed only to correctly output the final results on the test dataset
 """
-class ImageDataset(Dataset):
+class ImageDatasetTest(Dataset):
     def __get_labels(self, image_name):
         labels = []
         image_name = re.findall(r'\d+', image_name)[0]
@@ -44,10 +39,11 @@ class ImageDataset(Dataset):
         self.df = pd.DataFrame(columns=['image', 'labels'])
         self.df['image'] = image_names
         self.df['labels'] = label_names
-        del image_names
+        self.image_names = image_names
         del label_names
         self.transform = transform
         self.target_transform = target_transform
+        self.enc_labels = list(self.le.inverse_transform([0,1,2,3,4,5,6,7,8,9,10,11,12,13]))
 
     def __len__(self):
         return len(self.df.index) 
@@ -62,6 +58,3 @@ class ImageDataset(Dataset):
         if self.transform is not None:
             image = self.transform(image)
         return image, target
-
-    def print_order(self):
-        print(self.df)

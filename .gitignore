@@ -174,3 +174,5 @@ pa2/data/*
 
 project/data/annotations/*
 project/data/images/*
+project/data/test_images/*
+project/data/test_fake_annotations/*

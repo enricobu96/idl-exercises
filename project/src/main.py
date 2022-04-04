@@ -12,9 +12,6 @@ import numpy as np
 from utils.performance_measure import precision_recall_f1
 warnings.filterwarnings('ignore')
 
-torch.set_printoptions(threshold=10_000) #TODO: remove
-torch.set_num_threads(22)
-
 def execute(batch_size_train=10, batch_size_test=10, lr=.05, epochs=10, patience=5, activation=0.3, weight_decay=0.1, transform=True, dropout=False, model=CNN(False)):
     """
     HYPERPARAMETERS AND CONSTANTS
@@ -211,4 +208,4 @@ def execute(batch_size_train=10, batch_size_test=10, lr=.05, epochs=10, patience
         print('TEST F1-SCORE',  (f1 / (train_size/BATCH_SIZE_TEST)))
 
 
-execute(model=CNN(dropout=False))
+execute(model=CNN3(dropout=False))
