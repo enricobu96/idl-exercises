@@ -89,8 +89,8 @@ def execute(batch_size_train=10, batch_size_test=10, lr=.05, epochs=10, patience
     test_size = int(len(data)-train_size)
     train_set, test_set = torch.utils.data.random_split(data, [train_size, test_size])
 
-    train_loader = torch.utils.data.DataLoader(dataset=train_set, batch_size=BATCH_SIZE_TRAIN, shuffle=True, collate_fn=collate_fn)
-    test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=BATCH_SIZE_TEST, shuffle=True, collate_fn=collate_fn)
+    train_loader = torch.utils.data.DataLoader(dataset=train_set, batch_size=BATCH_SIZE_TRAIN, shuffle=False, collate_fn=collate_fn)
+    test_loader = torch.utils.data.DataLoader(dataset=test_set, batch_size=BATCH_SIZE_TEST, shuffle=False, collate_fn=collate_fn)
 
     if USE_VALIDATION:
         test_size = int(test_size/2)
@@ -205,7 +205,7 @@ def execute(batch_size_train=10, batch_size_test=10, lr=.05, epochs=10, patience
                 (batch_num, len(test_loader), test_loss / (batch_num + 1)))
         print('TEST PRECISION:', (precision / (test_size/BATCH_SIZE_TEST)))
         print('TEST RECALL:', (recall / (test_size/BATCH_SIZE_TEST)))
-        print('TEST F1-SCORE',  (f1 / (train_size/BATCH_SIZE_TEST)))
+        print('TEST F1-SCORE',  (f1 / (test_size/BATCH_SIZE_TEST)))
 
 
 execute(model=CNN3(dropout=False))
